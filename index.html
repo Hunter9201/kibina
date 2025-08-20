@@ -50,7 +50,6 @@
   .warnmsg{background:#fff7ed;border:1px solid #fdba74;color:#9a3412;padding:8px;border-radius:10px}
   .goodmsg{background:#ecfdf5;border:1px solid #86efac;color:#065f46;padding:8px;border-radius:10px}
   .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; white-space: pre-wrap;}
-
 </style>
 </head>
 <body>
@@ -334,9 +333,9 @@
           <p class="help">Uses the <b>official KIBIINA template</b> for all imports & exports. Ledger export can be blank (template) or filled from the selected period. Import is strictly validated.</p>
         </div>
         <div class="card">
-          <h3>Self‑Test / Diagnostics</h3>
+          <h3>Self-Test / Diagnostics</h3>
           <div class="stack">
-            <button class="btn" id="btnSelfTest">Run Self‑Test</button>
+            <button class="btn" id="btnSelfTest">Run Self-Test</button>
           </div>
           <div id="diagOut" class="mono" style="margin-top:8px"></div>
           <p class="help">Runs sanity checks for: numbered members 1–30, loans & interest accrual, ledger fill, and Excel template (if online).</p>
@@ -349,7 +348,6 @@
       </div>
     </section>
   </main>
-
 <script>
 /* ========= Utilities ========= */
 const UGX = (v)=> new Intl.NumberFormat('en-UG', {style:'currency', currency:'UGX', maximumFractionDigits:0}).format(v||0);
@@ -358,53 +356,44 @@ const parseDate = s => new Date(s+'T00:00:00');
 const daysBetween = (a,b)=> Math.max(0, Math.round((parseDate(b)-parseDate(a)) / (1000*60*60*24)));
 const clone = x => JSON.parse(JSON.stringify(x));
 
-// Helper: member lookups by No (1..30) and safe loan lookup
-function getMemberByNo(no){ return db.members.find(m => Number(m.number) === Number(no)); }
-function getLoanByMemberNo(no){
-  const m = getMemberByNo(no);
-  return db.loans.find(l => Number(l.memberNo)===Number(no) || (m && l.memberId===m.id));
-}
-
 /* ========= Data Model (localStorage) ========= */
-const KEY='kibiina_v2';
-let db = JSON.parse(localStorage.getItem(KEY) || '{}');
+const KEY='kibiina_v3';
+let db = {};
+try { db = JSON.parse(localStorage.getItem(KEY) || '{}'); }
+catch(e){ console.warn('Local data corrupted. Resetting storage.', e); localStorage.removeItem(KEY); db = {}; }
 if(!db.members){ // initialize
   db = {
-    members: [], // {id,number,name,joinDate,shares,munno,loanId?}
-    loans: [],   // {id, memberNo, memberId?, principalOut, rateMonthly, startDate, lastAccrual, accruedInterest}
+    members: [], // {id,number,name,joinDate,shares,munno}
+    loans: [],   // {id, memberNo, principalOut, rateMonthly, startDate, lastAccrual, accruedInterest}
     welfareFund: 0,
-    tx: [],      // {ts, type, memberNo?, memberId?, amount, meta}
+    tx: [],      // {ts, type, memberNo, amount, meta}
     settings: { lastMeetingDate: todayStr() }
   };
   save();
 }
 function save(){ localStorage.setItem(KEY, JSON.stringify(db)); }
-// Ensure legacy data gets member numbers 1..30
-function ensureMemberNumbers(){
-  const used = new Set(db.members.map(m=> Number(m.number)).filter(Boolean));
-  const nextFree = ()=>{ for(let i=1;i<=30;i++){ if(!used.has(i)){ used.add(i); return i; } } return null; };
-  db.members.forEach(m=>{ if(!m.number){ const n=nextFree(); if(n) m.number=n; }});
-  save();
-}
-ensureMemberNumbers();(){ localStorage.setItem(KEY, JSON.stringify(db)); }
 
-/* ========= Helpers: member numbers ========= */
-const getMemberByNo = no => db.members.find(m=> Number(m.number)===Number(no));
-const ensureUniqueNo = (no, ignoreId=null)=> !db.members.some(m=> Number(m.number)===Number(no) && m.id!==ignoreId);
-const nextFreeNo = ()=> { for(let i=1;i<=30;i++){ if(!db.members.some(m=>Number(m.number)===i)) return i; } return null; };
+// Helpers for members
+function getMemberByNo(no){ return db.members.find(m => Number(m.number) === Number(no)); }
+function ensureUniqueNo(no, ignoreId=null){ return !db.members.some(m=> Number(m.number)===Number(no) && m.id!==ignoreId); }
+function nextFreeNo(){ for(let i=1;i<=30;i++){ if(!db.members.some(m=>Number(m.number)===i)) return i; } return null; }
 
 /* ========= Tabs ========= */
-document.getElementById('tabs').addEventListener('click', e=>{
-  const b = e.target.closest('.tab'); if(!b) return;
-  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x===b));
-  document.querySelectorAll('.tabpanel').forEach(p=>p.hidden = p.id !== b.dataset.tab);
-  if(b.dataset.tab==='dashboard') renderDashboard();
-  if(b.dataset.tab==='members') renderMembers();
-  if(b.dataset.tab==='loans')    { accrueAll(); renderLoans(); }
-  if(b.dataset.tab==='repay')    { accrueAll(); renderRepay(); }
-  if(b.dataset.tab==='reports')  { accrueAll(); initReports(); }
-  if(b.dataset.tab==='meeting')  initMeeting();
-});
+function wireTabs(){
+  const tabsEl = document.getElementById('tabs');
+  if(!tabsEl) return;
+  tabsEl.addEventListener('click', e=>{
+    const b = e.target.closest('.tab'); if(!b) return;
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x===b));
+    document.querySelectorAll('.tabpanel').forEach(p=>p.hidden = p.id !== b.dataset.tab);
+    if(b.dataset.tab==='dashboard') renderDashboard();
+    if(b.dataset.tab==='members')   renderMembers();
+    if(b.dataset.tab==='loans')    { accrueAll(); renderLoans(); }
+    if(b.dataset.tab==='repay')    { accrueAll(); renderRepay(); }
+    if(b.dataset.tab==='reports')  { accrueAll(); initReports(); }
+    if(b.dataset.tab==='meeting')  initMeeting();
+  });
+}
 
 /* ========= Dashboard ========= */
 function renderDashboard(){
@@ -422,14 +411,15 @@ function renderDashboard(){
   document.getElementById('fundWelfare').textContent = UGX(db.welfareFund||0);
   document.getElementById('fundMunno').textContent = UGX(munnoAgg);
 }
-renderDashboard();
 
 /* ========= Members ========= */
 let editingId = null;
 function renderMembers(){
   const tbody = document.querySelector('#membersTable tbody');
+  if(!tbody) return;
   tbody.innerHTML = '';
-  [...db.members].sort((a,b)=>Number(a.number)-Number(b.number)).forEach((m)=>{
+  const rows = [...db.members].sort((a,b)=>Number(a.number)-Number(b.number));
+  rows.forEach((m)=>{
     const shareCap = (m.shares||0)*3000;
     const loan = db.loans.find(l=>Number(l.memberNo)===Number(m.number));
     const principalOut = loan? loan.principalOut : 0;
@@ -455,150 +445,353 @@ function resetMemberForm(){
   document.getElementById('mJoin').value=todayStr();
   document.getElementById('btnDeleteMember').disabled = true;
 }
-document.getElementById('membersTable').addEventListener('click', e=>{
-  const id = e.target.dataset.edit; if(!id) return;
-  const m = db.members.find(x=>x.id===id);
-  editingId = id;
-  document.getElementById('mNo').value    = m.number||'';
-  document.getElementById('mName').value  = m.name||'';
-  document.getElementById('mShares').value= m.shares||0;
-  document.getElementById('mMunno').value = m.munno||0;
-  document.getElementById('mJoin').value  = m.joinDate||todayStr();
-  document.getElementById('btnDeleteMember').disabled = false;
-});
-document.getElementById('btnSaveMember').onclick = ()=>{
-  let number = parseInt(document.getElementById('mNo').value||0);
-  if(!number){
-    const nf = nextFreeNo();
-    if(!nf){ alert('All numbers 1–30 are taken. Delete a member first.'); return; }
-    number = nf; document.getElementById('mNo').value = nf;
+function wireMembers(){
+  const table = document.getElementById('membersTable');
+  if(table){
+    table.addEventListener('click', e=>{
+      const id = e.target.dataset.edit; if(!id) return;
+      const m = db.members.find(x=>x.id===id);
+      editingId = id;
+      document.getElementById('mNo').value    = m.number||'';
+      document.getElementById('mName').value  = m.name||'';
+      document.getElementById('mShares').value= m.shares||0;
+      document.getElementById('mMunno').value = m.munno||0;
+      document.getElementById('mJoin').value  = m.joinDate||todayStr();
+      document.getElementById('btnDeleteMember').disabled = false;
+    });
   }
-  if(number<1 || number>30){ alert('Member number must be between 1 and 30.'); return; }
-  const name = document.getElementById('mName').value.trim();
-  const shares = Math.min(10, Math.max(0, parseInt(document.getElementById('mShares').value||0)));
-  const munno = Math.max(0, parseInt(document.getElementById('mMunno').value||0));
-  const join = document.getElementById('mJoin').value || todayStr();
-  if(!ensureUniqueNo(number, editingId)){ alert('That number is already assigned to another member.'); return; }
-  if(!name){ alert('Enter member name'); return; }
-  if(editingId){
-    const m = db.members.find(x=>x.id===editingId);
-    // update references if number changed
-    if(Number(m.number)!==number){
-      db.loans.forEach(l=>{ if(Number(l.memberNo)===Number(m.number)) l.memberNo = number; });
-      db.tx.forEach(t=>{ if(Number(t.memberNo)===Number(m.number)) t.memberNo = number; });
-    }
-    m.number=number; m.name=name; m.shares=shares; m.munno=munno; m.joinDate=join;
-  }else{
-    const id='m'+Math.random().toString(36).slice(2,9);
-    db.members.push({id, number, name, shares, munno, joinDate:join});
+  const saveBtn = document.getElementById('btnSaveMember');
+  if(saveBtn){
+    saveBtn.onclick = ()=>{
+      let number = parseInt(document.getElementById('mNo').value||0);
+      if(!number){
+        const nf = nextFreeNo();
+        if(!nf){ alert('All numbers 1–30 are taken. Delete a member first.'); return; }
+        number = nf; document.getElementById('mNo').value = nf;
+      }
+      if(number<1 || number>30){ alert('Member number must be between 1 and 30.'); return; }
+      const name = document.getElementById('mName').value.trim();
+      const shares = Math.min(10, Math.max(0, parseInt(document.getElementById('mShares').value||0)));
+      const munno = Math.max(0, parseInt(document.getElementById('mMunno').value||0));
+      const join = document.getElementById('mJoin').value || todayStr();
+      if(!ensureUniqueNo(number, editingId)){ alert('That number is already assigned to another member.'); return; }
+      if(!name){ alert('Enter member name'); return; }
+      if(editingId){
+        const m = db.members.find(x=>x.id===editingId);
+        if(Number(m.number)!==number){
+          db.loans.forEach(l=>{ if(Number(l.memberNo)===Number(m.number)) l.memberNo = number; });
+          db.tx.forEach(t=>{ if(Number(t.memberNo)===Number(m.number)) t.memberNo = number; });
+        }
+        m.number=number; m.name=name; m.shares=shares; m.munno=munno; m.joinDate=join;
+      }else{
+        const id='m'+Math.random().toString(36).slice(2,9);
+        db.members.push({id, number, name, shares, munno, joinDate:join});
+      }
+      save(); renderMembers(); renderDashboard(); resetMemberForm();
+    };
   }
-  save(); renderMembers(); renderDashboard(); resetMemberForm();
-};
-document.getElementById('btnDeleteMember').onclick = ()=>{
-  if(!editingId) return;
-  const mem = db.members.find(x=>x.id===editingId);
-  if(!confirm(`Delete member No. ${mem?.number}? This also removes loans.`)) return;
-  // remove loans for that number
-  db.loans = db.loans.filter(l=> Number(l.memberNo)!==Number(mem.number));
-  db.members = db.members.filter(m=>m.id!==editingId);
-  save(); renderMembers(); renderDashboard(); resetMemberForm();
-};
-document.getElementById('btnCreate30').onclick = ()=>{
-  if(db.members.length && !confirm('Replace current list with 30 numbered members (1–30)?')) return;
-  db.members = [];
-  for(let i=1;i<=30;i++){
-    const id='m'+Math.random().toString(36).slice(2,9);
-    db.members.push({id, number:i, name:`Member ${i}`, shares:0, munno:0, joinDate:todayStr()});
+  const delBtn = document.getElementById('btnDeleteMember');
+  if(delBtn){
+    delBtn.onclick = ()=>{
+      if(!editingId) return;
+      const mem = db.members.find(x=>x.id===editingId);
+      if(!confirm(`Delete member No. ${mem?.number}? This also removes loans.`)) return;
+      db.loans = db.loans.filter(l=> Number(l.memberNo)!==Number(mem.number));
+      db.members = db.members.filter(m=>m.id!==editingId);
+      save(); renderMembers(); renderDashboard(); resetMemberForm();
+    };
   }
-  save(); renderMembers(); renderDashboard();
-};
+  const c30 = document.getElementById('btnCreate30');
+  if(c30){
+    c30.onclick = ()=>{
+      if(db.members.length && !confirm('Replace current list with 30 numbered members (1–30)?')) return;
+      db.members = [];
+      for(let i=1;i<=30;i++){
+        const id='m'+Math.random().toString(36).slice(2,9);
+        db.members.push({id, number:i, name:`Member ${i}`, shares:0, munno:0, joinDate:todayStr()});
+      }
+      save(); renderMembers(); renderDashboard();
+    };
+  }
+}
 
 /* ========= Meeting (Sunday) ========= */
 function nextSundayStr(){ const d=new Date(); const day=d.getDay(); const diff=(7-day)%7; d.setDate(d.getDate()+diff); return d.toISOString().slice(0,10); }
-document.getElementById('btnTodaySunday').onclick = ()=>{ document.getElementById('meetDate').value = nextSundayStr(); };
-function initMeeting(){ document.getElementById('meetDate').value = db.settings.lastMeetingDate || nextSundayStr(); document.getElementById('welfarePer').value = 1500; document.getElementById('meetingSheet').innerHTML=''; document.getElementById('btnPostMeeting').disabled = true; }
-document.getElementById('btnStartMeeting').onclick = ()=>{
-  const date = document.getElementById('meetDate').value || todayStr();
-  db.settings.lastMeetingDate = date; save();
-  const per = parseInt(document.getElementById('welfarePer').value||1500);
-  const box = document.getElementById('meetingSheet');
-  if(db.members.length===0){ box.innerHTML='<div class="warnmsg">No members yet. Add members first.</div>'; return; }
-  const sorted = [...db.members].sort((a,b)=> Number(a.number)-Number(b.number));
-  let html = `<table class="table"><thead><tr>
-      <th>No.</th><th>Name</th><th>Munno Deposit</th><th>Welfare (UGX ${per})</th><th>Buy Shares</th></tr></thead><tbody>`;
-  sorted.forEach((m)=>{
-    html += `<tr>
-      <td>${m.number}</td>
-      <td>${m.name}</td>
-      <td><input type="number" min="0" step="1" id="in_munno_${m.number}" placeholder="0"></td>
-      <td style="text-align:center"><input type="checkbox" id="in_wel_${m.number}" checked></td>
-      <td><input type="number" min="0" max="${Math.max(0,10-(m.shares||0))}" step="1" id="in_share_${m.number}" placeholder="0"></td>
-    </tr>`;
-  });
-  html += '</tbody></table>';
-  box.innerHTML = html;
-  document.getElementById('btnPostMeeting').disabled = false;
-};
-document.getElementById('btnPostMeeting').onclick = ()=>{
-  const date = document.getElementById('meetDate').value || todayStr();
-  const per = parseInt(document.getElementById('welfarePer').value||1500);
-  accrueAll(date); // up to meeting date
-  db.members.forEach(m=>{
-    const munno = parseInt(document.getElementById(`in_munno_${m.number}`).value||0);
-    const wel = document.getElementById(`in_wel_${m.number}`).checked;
-    const sharesBuy = Math.min(10-(m.shares||0), Math.max(0, parseInt(document.getElementById(`in_share_${m.number}`).value||0)));
-    if(munno>0){
-      m.munno = (m.munno||0) + munno;
-      db.tx.push({ts:date, type:'munno_deposit', memberNo:m.number, amount:munno});
-    }
-    if(wel){
-      db.welfareFund = (db.welfareFund||0) + per;
-      db.tx.push({ts:date, type:'welfare', memberNo:m.number, amount:per});
-    }
-    if(sharesBuy>0){
-      m.shares = (m.shares||0) + sharesBuy;
-      db.tx.push({ts:date, type:'share_buy', memberNo:m.number, amount: sharesBuy*3000, meta:{shares:sharesBuy}});
-    }
-  });
-  save(); initMeeting(); renderDashboard(); alert('Meeting posted.');
-};
+function initMeeting(){
+  const md = document.getElementById('meetDate'); if(md) md.value = db.settings.lastMeetingDate || nextSundayStr();
+  const wp = document.getElementById('welfarePer'); if(wp) wp.value = 1500;
+  const box = document.getElementById('meetingSheet'); if(box) box.innerHTML='';
+  const pm = document.getElementById('btnPostMeeting'); if(pm) pm.disabled = true;
+}
+function wireMeeting(){
+  const setSun = document.getElementById('btnTodaySunday');
+  if(setSun) setSun.onclick = ()=>{ document.getElementById('meetDate').value = nextSundayStr(); };
+  const start = document.getElementById('btnStartMeeting');
+  if(start) start.onclick = ()=>{
+    const date = document.getElementById('meetDate').value || todayStr();
+    db.settings.lastMeetingDate = date; save();
+    const per = parseInt(document.getElementById('welfarePer').value||1500);
+    const box = document.getElementById('meetingSheet');
+    if(db.members.length===0){ box.innerHTML='<div class="warnmsg">No members yet. Add members first.</div>'; return; }
+    const sorted = [...db.members].sort((a,b)=> Number(a.number)-Number(b.number));
+    let html = `<table class="table"><thead><tr>
+        <th>No.</th><th>Name</th><th>Munno Deposit</th><th>Welfare (UGX ${per})</th><th>Buy Shares</th></tr></thead><tbody>`;
+    sorted.forEach((m)=>{
+      html += `<tr>
+        <td>${m.number}</td>
+        <td>${m.name}</td>
+        <td><input type="number" min="0" step="1" id="in_munno_${m.number}" placeholder="0"></td>
+        <td style="text-align:center"><input type="checkbox" id="in_wel_${m.number}" checked></td>
+        <td><input type="number" min="0" max="${Math.max(0,10-(m.shares||0))}" step="1" id="in_share_${m.number}" placeholder="0"></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    box.innerHTML = html;
+    document.getElementById('btnPostMeeting').disabled = false;
+  };
+  const post = document.getElementById('btnPostMeeting');
+  if(post) post.onclick = ()=>{
+    const date = document.getElementById('meetDate').value || todayStr();
+    const per = parseInt(document.getElementById('welfarePer').value||1500);
+    accrueAll(date);
+    db.members.forEach(m=>{
+      const munno = parseInt(document.getElementById(`in_munno_${m.number}`).value||0);
+      const wel = document.getElementById(`in_wel_${m.number}`).checked;
+      const sharesBuy = Math.min(10-(m.shares||0), Math.max(0, parseInt(document.getElementById(`in_share_${m.number}`).value||0)));
+      if(munno>0){
+        m.munno = (m.munno||0) + munno;
+        db.tx.push({ts:date, type:'munno_deposit', memberNo:m.number, amount:munno});
+      }
+      if(wel){
+        db.welfareFund = (db.welfareFund||0) + per;
+        db.tx.push({ts:date, type:'welfare', memberNo:m.number, amount:per});
+      }
+      if(sharesBuy>0){
+        m.shares = (m.shares||0) + sharesBuy;
+        db.tx.push({ts:date, type:'share_buy', memberNo:m.number, amount: sharesBuy*3000, meta:{shares:sharesBuy}});
+      }
+    });
+    save(); initMeeting(); renderDashboard(); alert('Meeting posted.');
+  };
+}
 
 /* ========= Loans ========= */
 function loanRateFor(amount){ if(amount>=1 && amount<=3999000) return 0.025; if(amount>3999000) return 0.02; return 0; }
-function accrueAll(upToDate){ const dTo = upToDate || todayStr(); db.loans.forEach(l=>{ if(l.principalOut<=0) return; const start = l.lastAccrual || l.startDate; const days = daysBetween(start, dTo); if(days<=0) return; const dailyRate = l.rateMonthly/30; const add = l.principalOut * dailyRate * days; l.accruedInterest = (l.accruedInterest||0) + Math.round(add); l.lastAccrual = dTo; }); save(); }
-function renderLoans(){ const sel = document.getElementById('loanMember'); const sorted=[...db.members].sort((a,b)=>Number(a.number)-Number(b.number)); sel.innerHTML = sorted.map(m=>`<option value="${m.number}">${m.number} – ${m.name}</option>`).join(''); document.getElementById('loanAmt').value=''; document.getElementById('loanDate').value = todayStr(); document.getElementById('loanHint').textContent=''; const tbody = document.querySelector('#loansTable tbody'); tbody.innerHTML=''; db.loans.forEach(l=>{ const m = getMemberByNo(l.memberNo); const tr = document.createElement('tr'); tr.innerHTML = `<td>${l.memberNo}</td><td>${m? m.name:''}</td><td>${UGX(l.principalOut)}</td><td>${UGX(l.accruedInterest||0)}</td><td>${(l.rateMonthly*100).toFixed(2)}%/mo</td><td>${l.startDate}</td>`; tbody.appendChild(tr); }); }
-document.getElementById('loanAmt').addEventListener('input', ()=>{ const no = document.getElementById('loanMember').value; const m = getMemberByNo(no); if(!m) return; const amount = parseInt(document.getElementById('loanAmt').value||0); const shareCap = (m.shares||0)*3000; const currentLoan = db.loans.find(l=>Number(l.memberNo)===Number(no)); const principalOut = currentLoan? currentLoan.principalOut : 0; const limit = Math.max(0, shareCap*2 - principalOut); const rate = loanRateFor(amount); document.getElementById('loanHint').innerHTML = `Share capital: <b>${UGX(shareCap)}</b> → Limit: <b>${UGX(limit)}</b> • Proposed rate: <b>${(rate*100)||0}%/mo</b>`; });
-document.getElementById('btnIssueLoan').onclick = ()=>{ const memberNo = document.getElementById('loanMember').value; const m = getMemberByNo(memberNo); if(!m){ alert('Select member'); return; } const amount = parseInt(document.getElementById('loanAmt').value||0); const date = document.getElementById('loanDate').value || todayStr(); if(amount<=0){ alert('Enter amount'); return; } const current = db.loans.find(l=>Number(l.memberNo)===Number(memberNo)); const principalOut = current? current.principalOut : 0; const limit = Math.max(0, ((m.shares||0)*3000)*2 - principalOut); if(amount>limit){ alert('Amount exceeds limit.'); return; } const rate = loanRateFor(amount); accrueAll(date); if(current){ current.principalOut += amount; db.tx.push({ts:date, type:'loan_topup', memberNo, amount}); } else { db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo, principalOut:amount, rateMonthly:rate, startDate:date, lastAccrual:date, accruedInterest:0 }); db.tx.push({ts:date, type:'loan_issue', memberNo, amount}); } save(); renderLoans(); renderDashboard(); alert('Loan recorded.'); };
+function accrueAll(upToDate){
+  const dTo = upToDate || todayStr();
+  db.loans.forEach(l=>{
+    if(l.principalOut<=0) return;
+    const start = l.lastAccrual || l.startDate;
+    const days = daysBetween(start, dTo);
+    if(days<=0) return;
+    const dailyRate = l.rateMonthly/30;
+    const add = l.principalOut * dailyRate * days;
+    l.accruedInterest = (l.accruedInterest||0) + Math.round(add);
+    l.lastAccrual = dTo;
+  });
+  save();
+}
+function renderLoans(){
+  const sel = document.getElementById('loanMember'); if(!sel) return;
+  const sorted=[...db.members].sort((a,b)=>Number(a.number)-Number(b.number));
+  sel.innerHTML = sorted.map(m=>`<option value="${m.number}">${m.number} – ${m.name}</option>`).join('');
+  document.getElementById('loanAmt').value='';
+  document.getElementById('loanDate').value = todayStr();
+  document.getElementById('loanHint').textContent='';
+  const tbody = document.querySelector('#loansTable tbody'); if(!tbody) return;
+  tbody.innerHTML='';
+  db.loans.forEach(l=>{
+    const m = getMemberByNo(l.memberNo);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${l.memberNo}</td><td>${m? m.name:''}</td><td>${UGX(l.principalOut)}</td><td>${UGX(l.accruedInterest||0)}</td><td>${(l.rateMonthly*100).toFixed(2)}%/mo</td><td>${l.startDate}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+function wireLoans(){
+  const amt = document.getElementById('loanAmt');
+  if(amt){
+    amt.addEventListener('input', ()=>{
+      const no = document.getElementById('loanMember').value;
+      const m = getMemberByNo(no); if(!m){ document.getElementById('loanHint').textContent=''; return; }
+      const amount = parseInt(document.getElementById('loanAmt').value||0);
+      const shareCap = (m.shares||0)*3000;
+      const currentLoan = db.loans.find(l=>Number(l.memberNo)===Number(no));
+      const principalOut = currentLoan? currentLoan.principalOut : 0;
+      const limit = Math.max(0, shareCap*2 - principalOut);
+      const rate = loanRateFor(amount);
+      document.getElementById('loanHint').innerHTML =
+        `Share capital: <b>${UGX(shareCap)}</b> → Limit: <b>${UGX(limit)}</b> • Proposed rate: <b>${(rate*100)||0}%/mo</b>`;
+    });
+  }
+  const issue = document.getElementById('btnIssueLoan');
+  if(issue){
+    issue.onclick = ()=>{
+      const memberNo = document.getElementById('loanMember').value;
+      const m = getMemberByNo(memberNo);
+      if(!m){ alert('Select member'); return; }
+      const amount = parseInt(document.getElementById('loanAmt').value||0);
+      const date = document.getElementById('loanDate').value || todayStr();
+      if(amount<=0){ alert('Enter amount'); return; }
+      const current = db.loans.find(l=>Number(l.memberNo)===Number(memberNo));
+      const principalOut = current? current.principalOut : 0;
+      const limit = Math.max(0, ((m.shares||0)*3000)*2 - principalOut);
+      if(amount>limit){ alert('Amount exceeds limit.'); return; }
+      const rate = loanRateFor(amount);
+      accrueAll(date);
+      if(current){
+        current.principalOut += amount;
+        db.tx.push({ts:date, type:'loan_topup', memberNo, amount});
+      } else {
+        db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo, principalOut:amount, rateMonthly:rate, startDate:date, lastAccrual:date, accruedInterest:0 });
+        db.tx.push({ts:date, type:'loan_issue', memberNo, amount});
+      }
+      save(); renderLoans(); renderDashboard(); alert('Loan recorded.');
+    };
+  }
+}
 
 /* ========= Repayments ========= */
-function renderRepay(){ const sel = document.getElementById('rpMember'); const withLoans = db.members.filter(m=> db.loans.find(l=>Number(l.memberNo)===Number(m.number) && (l.principalOut>0 || (l.accruedInterest||0)>0))); const sorted=[...withLoans].sort((a,b)=>Number(a.number)-Number(b.number)); sel.innerHTML = sorted.map(m=>`<option value="${m.number}">${m.number} – ${m.name}</option>`).join(''); document.getElementById('rpAmt').value=''; document.getElementById('rpDate').value = todayStr(); document.getElementById('rpApply').value = 'auto'; const tbody = document.querySelector('#txTable tbody'); const last = clone(db.tx).sort((a,b)=> new Date(b.ts) - new Date(a.ts)).slice(0,15); tbody.innerHTML = last.map(t=>{ const m = getMemberByNo(t.memberNo); return `<tr><td>${t.ts}</td><td>${t.memberNo||''}</td><td>${m?m.name:''}</td><td>${t.type}</td><td>${UGX(t.amount)}</td></tr>`; }).join(''); }
-document.getElementById('btnPostRepay').onclick = ()=>{ const memberNo = document.getElementById('rpMember').value; const amt = parseInt(document.getElementById('rpAmt').value||0); const date = document.getElementById('rpDate').value || todayStr(); const how = document.getElementById('rpApply').value; if(amt<=0){ alert('Enter amount'); return; } const loan = db.loans.find(l=>Number(l.memberNo)===Number(memberNo)); if(!loan){ alert('No active loan'); return; } accrueAll(date); let remain = amt; if(how==='auto' || how==='interest'){ const payInt = Math.min(loan.accruedInterest||0, remain); if(payInt>0){ loan.accruedInterest -= payInt; db.tx.push({ts:date, type:'repay_interest', memberNo, amount:payInt}); remain -= payInt; } } if((how==='auto' || how==='principal') && remain>0){ const payP = Math.min(loan.principalOut, remain); if(payP>0){ loan.principalOut -= payP; db.tx.push({ts:date, type:'repay_principal', memberNo, amount:payP}); remain -= payP; } } save(); renderRepay(); renderLoans(); renderDashboard(); alert('Repayment posted.'); };
+function renderRepay(){
+  const sel = document.getElementById('rpMember'); if(!sel) return;
+  const withLoans = db.members.filter(m=> db.loans.find(l=>Number(l.memberNo)===Number(m.number) && (l.principalOut>0 || (l.accruedInterest||0)>0)));
+  const sorted=[...withLoans].sort((a,b)=>Number(a.number)-Number(b.number));
+  sel.innerHTML = sorted.map(m=>`<option value="${m.number}">${m.number} – ${m.name}</option>`).join('');
+  document.getElementById('rpAmt').value='';
+  document.getElementById('rpDate').value = todayStr();
+  document.getElementById('rpApply').value = 'auto';
+  const tbody = document.querySelector('#txTable tbody'); if(!tbody) return;
+  const last = clone(db.tx).sort((a,b)=> new Date(b.ts) - new Date(a.ts)).slice(0,15);
+  tbody.innerHTML = last.map(t=>{
+    const m = getMemberByNo(t.memberNo);
+    return `<tr><td>${t.ts}</td><td>${t.memberNo||''}</td><td>${m?m.name:''}</td><td>${t.type}</td><td>${UGX(t.amount)}</td></tr>`;
+  }).join('');
+}
+function wireRepay(){
+  const post = document.getElementById('btnPostRepay');
+  if(post){
+    post.onclick = ()=>{
+      const memberNo = document.getElementById('rpMember').value;
+      const amt = parseInt(document.getElementById('rpAmt').value||0);
+      const date = document.getElementById('rpDate').value || todayStr();
+      const how = document.getElementById('rpApply').value;
+      if(amt<=0){ alert('Enter amount'); return; }
+      const loan = db.loans.find(l=>Number(l.memberNo)===Number(memberNo));
+      if(!loan){ alert('No active loan'); return; }
+      accrueAll(date);
+      let remain = amt;
+      if(how==='auto' || how==='interest'){
+        const payInt = Math.min(loan.accruedInterest||0, remain);
+        if(payInt>0){ loan.accruedInterest -= payInt; db.tx.push({ts:date, type:'repay_interest', memberNo, amount:payInt}); remain -= payInt; }
+      }
+      if((how==='auto' || how==='principal') && remain>0){
+        const payP = Math.min(loan.principalOut, remain);
+        if(payP>0){ loan.principalOut -= payP; db.tx.push({ts:date, type:'repay_principal', memberNo, amount:payP}); remain -= payP; }
+      }
+      save(); renderRepay(); renderLoans(); renderDashboard(); alert('Repayment posted.');
+    };
+  }
+}
 
 /* ========= Reports ========= */
-function initReports(){ const y = new Date().getFullYear(); document.getElementById('rYear').value = y; document.getElementById('yShareYear').value = y; document.getElementById('quarterOut').innerHTML=''; document.getElementById('shareOut').innerHTML=''; }
-function quarterRange(q, year){ const y=Number(year); if(q==='Q1') return [new Date(y,0,1), new Date(y,2,31)]; if(q==='Q2') return [new Date(y,3,1), new Date(y,5,30)]; if(q==='Q3') return [new Date(y,6,1), new Date(y,8,30)]; return [new Date(y,9,1), new Date(y,11,31)]; }
-document.getElementById('btnRunQuarter').onclick = ()=>{ const q = document.getElementById('rQuarter').value; const y = parseInt(document.getElementById('rYear').value||new Date().getFullYear()); const [a,b] = quarterRange(q,y); const inRange = t => { const d = new Date(t.ts); return d>=a && d<=b; }; const welfare = db.tx.filter(t=>t.type==='welfare' && inRange(t)).reduce((s,t)=>s+t.amount,0); const munno = db.tx.filter(t=>t.type==='munno_deposit' && inRange(t)).reduce((s,t)=>s+t.amount,0); const shares = db.tx.filter(t=>t.type==='share_buy' && inRange(t)).reduce((s,t)=>s+t.amount,0); const interestRec = db.tx.filter(t=>t.type==='repay_interest' && inRange(t)).reduce((s,t)=>s+t.amount,0); const principalRec = db.tx.filter(t=>t.type==='repay_principal' && inRange(t)).reduce((s,t)=>s+t.amount,0); const loansOut = db.tx.filter(t=>(t.type==='loan_issue'||t.type==='loan_topup') && inRange(t)).reduce((s,t)=>s+t.amount,0); document.getElementById('quarterOut').innerHTML = `
-    <div class="grid-3">
-      <div class="stat"><span class="muted">Welfare contributions</span><b>${UGX(welfare)}</b></div>
-      <div class="stat"><span class="muted">Munno deposits</span><b>${UGX(munno)}</b></div>
-      <div class="stat"><span class="muted">Shares purchased</span><b>${UGX(shares)}</b></div>
-    </div>
-    <div class="grid-3" style="margin-top:8px">
-      <div class="stat"><span class="muted">Loans issued/topups</span><b>${UGX(loansOut)}</b></div>
-      <div class="stat"><span class="muted">Principal repaid</span><b>${UGX(principalRec)}</b></div>
-      <div class="stat"><span class="muted">Interest collected</span><b>${UGX(interestRec)}</b></div>
-    </div>
-  `; };
-document.getElementById('btnShareOut').onclick = ()=>{ const year = parseInt(document.getElementById('yShareYear').value||new Date().getFullYear()); const totalInterest = db.tx.filter(t => t.type==='repay_interest' && new Date(t.ts).getFullYear()===year).reduce((s,t)=>s+t.amount,0); const members = clone(db.members).map(m=> ({...m, shareCap:(m.shares||0)*3000})); const pool = members.reduce((s,m)=> s+m.shareCap, 0); let html = `<div class="stat"><span class="muted">Total interest (year)</span><b>${UGX(totalInterest)}</b></div>`; if(pool<=0 || totalInterest<=0){ html += `<p class="warnmsg" style="margin-top:8px">No share capital or no interest collected for ${year}.</p>`; }else{ html += `<table class="table" style="margin-top:8px"><thead><tr><th>No.</th><th>Name</th><th>Shares</th><th>Share Capital</th><th>Share %</th><th>Payout</th></tr></thead><tbody>`; members.sort((a,b)=>Number(a.number)-Number(b.number)).forEach(m=>{ const pct = m.shareCap/pool; const pay = Math.round(totalInterest * pct); html += `<tr><td>${m.number||''}</td><td>${m.name}</td><td>${m.shares||0}</td><td>${UGX(m.shareCap)}</td><td>${(pct*100).toFixed(2)}%</td><td>${UGX(pay)}</td></tr>`; }); html += `</tbody></table>`; } document.getElementById('shareOut').innerHTML = html; };
+function initReports(){
+  const y = new Date().getFullYear();
+  document.getElementById('rYear').value = y;
+  document.getElementById('yShareYear').value = y;
+  document.getElementById('quarterOut').innerHTML='';
+  document.getElementById('shareOut').innerHTML='';
+}
+function quarterRange(q, year){
+  const y=Number(year);
+  if(q==='Q1') return [new Date(y,0,1), new Date(y,2,31)];
+  if(q==='Q2') return [new Date(y,3,1), new Date(y,5,30)];
+  if(q==='Q3') return [new Date(y,6,1), new Date(y,8,30)];
+  return [new Date(y,9,1), new Date(y,11,31)];
+}
+function wireReports(){
+  const runQ = document.getElementById('btnRunQuarter');
+  if(runQ){
+    runQ.onclick = ()=>{
+      const q = document.getElementById('rQuarter').value;
+      const y = parseInt(document.getElementById('rYear').value||new Date().getFullYear());
+      const [a,b] = quarterRange(q,y);
+      const inRange = t => { const d = new Date(t.ts); return d>=a && d<=b; };
+      const welfare = db.tx.filter(t=>t.type==='welfare' && inRange(t)).reduce((s,t)=>s+t.amount,0);
+      const munno = db.tx.filter(t=>t.type==='munno_deposit' && inRange(t)).reduce((s,t)=>s+t.amount,0);
+      const shares = db.tx.filter(t=>t.type==='share_buy' && inRange(t)).reduce((s,t)=>s+t.amount,0);
+      const interestRec = db.tx.filter(t=>t.type==='repay_interest' && inRange(t)).reduce((s,t)=>s+t.amount,0);
+      const principalRec = db.tx.filter(t=>t.type==='repay_principal' && inRange(t)).reduce((s,t)=>s+t.amount,0);
+      const loansOut = db.tx.filter(t=>(t.type==='loan_issue'||t.type==='loan_topup') && inRange(t)).reduce((s,t)=>s+t.amount,0);
+      document.getElementById('quarterOut').innerHTML = `
+        <div class="grid-3">
+          <div class="stat"><span class="muted">Welfare contributions</span><b>${UGX(welfare)}</b></div>
+          <div class="stat"><span class="muted">Munno deposits</span><b>${UGX(munno)}</b></div>
+          <div class="stat"><span class="muted">Shares purchased</span><b>${UGX(shares)}</b></div>
+        </div>
+        <div class="grid-3" style="margin-top:8px">
+          <div class="stat"><span class="muted">Loans issued/topups</span><b>${UGX(loansOut)}</b></div>
+          <div class="stat"><span class="muted">Principal repaid</span><b>${UGX(principalRec)}</b></div>
+          <div class="stat"><span class="muted">Interest collected</span><b>${UGX(interestRec)}</b></div>
+        </div>
+      `;
+    };
+  }
+  const share = document.getElementById('btnShareOut');
+  if(share){
+    share.onclick = ()=>{
+      const year = parseInt(document.getElementById('yShareYear').value||new Date().getFullYear());
+      const totalInterest = db.tx.filter(t => t.type==='repay_interest' && new Date(t.ts).getFullYear()===year)
+                                 .reduce((s,t)=>s+t.amount,0);
+      const members = clone(db.members).map(m=> ({...m, shareCap:(m.shares||0)*3000}));
+      const pool = members.reduce((s,m)=> s+m.shareCap, 0);
+      let html = `<div class="stat"><span class="muted">Total interest (year)</span><b>${UGX(totalInterest)}</b></div>`;
+      if(pool<=0 || totalInterest<=0){
+        html += `<p class="warnmsg" style="margin-top:8px">No share capital or no interest collected for ${year}.</p>`;
+      }else{
+        html += `<table class="table" style="margin-top:8px"><thead><tr><th>No.</th><th>Name</th><th>Shares</th><th>Share Capital</th><th>Share %</th><th>Payout</th></tr></thead><tbody>`;
+        members.sort((a,b)=>Number(a.number)-Number(b.number)).forEach(m=>{
+          const pct = m.shareCap/pool;
+          const pay = Math.round(totalInterest * pct);
+          html += `<tr><td>${m.number||''}</td><td>${m.name}</td><td>${m.shares||0}</td><td>${UGX(m.shareCap)}</td><td>${(pct*100).toFixed(2)}%</td><td>${UGX(pay)}</td></tr>`;
+        });
+        html += `</tbody></table>`;
+      }
+      document.getElementById('shareOut').innerHTML = html;
+    };
+  }
+}
 
 /* ========= Backup/Restore (JSON) ========= */
-function download(filename, blob){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); setTimeout(()=> URL.revokeObjectURL(a.href), 1000); }
-document.getElementById('btnBackup').onclick = ()=>{ accrueAll(); download('kibiina-backup.json', new Blob([JSON.stringify(db,null,2)], {type:'application/json'})); };
-document.getElementById('btnBackup2').onclick = ()=>{ accrueAll(); download('kibiina-backup.json', new Blob([JSON.stringify(db,null,2)], {type:'application/json'})); };
-document.getElementById('restoreFile').addEventListener('change', handleRestore);
-document.getElementById('restoreFile2').addEventListener('change', handleRestore);
-function handleRestore(e){ const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = ()=>{ try{ const obj = JSON.parse(r.result); if(!obj.members||!obj.loans||!obj.tx){ alert('Invalid file'); return;} db = obj; save(); location.reload(); }catch(err){ alert('Invalid JSON'); } }; r.readAsText(f); }
-document.getElementById('btnWipe').onclick = ()=>{ if(!confirm('This will delete ALL data. Continue?')) return; localStorage.removeItem(KEY); location.reload(); };
+function download(filename, blob){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(()=> URL.revokeObjectURL(a.href), 1000);
+}
+function wireBackup(){
+  const b1 = document.getElementById('btnBackup');
+  const b2 = document.getElementById('btnBackup2');
+  if(b1) b1.onclick = ()=>{ accrueAll(); download('kibiina-backup.json', new Blob([JSON.stringify(db,null,2)], {type:'application/json'})); };
+  if(b2) b2.onclick = ()=>{ accrueAll(); download('kibiina-backup.json', new Blob([JSON.stringify(db,null,2)], {type:'application/json'})); };
+  const r1 = document.getElementById('restoreFile');
+  const r2 = document.getElementById('restoreFile2');
+  if(r1) r1.addEventListener('change', handleRestore);
+  if(r2) r2.addEventListener('change', handleRestore);
+  const wipe = document.getElementById('btnWipe');
+  if(wipe) wipe.onclick = ()=>{ if(!confirm('This will delete ALL data. Continue?')) return; localStorage.removeItem(KEY); location.reload(); };
+}
+function handleRestore(e){
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    try{
+      const obj = JSON.parse(r.result);
+      if(!obj.members||!obj.loans||!obj.tx){ alert('Invalid file'); return;}
+      db = obj; save(); location.reload();
+    }catch(err){ alert('Invalid JSON'); }
+  };
+  r.readAsText(f);
+}
 
 /* ========= Excel Import / Export (SheetJS) ========= */
 function loadXLSX(){
@@ -611,8 +804,7 @@ function loadXLSX(){
     document.head.appendChild(s);
   });
 }
-
-// ===== Template contract (STRICT) =====
+// Template contract
 const TEMPLATE_VERSION = 'kibiina-xlsx-v1';
 const MEMBERS_HEADERS = ['No','Name','JoinDate','Shares','Munno'];
 const LOANS_HEADERS   = ['No','PrincipalOut','RateMonthly','StartDate','LastAccrual','AccruedInterest'];
@@ -620,10 +812,8 @@ const TX_HEADERS      = ['Date','No','Type','Amount','Meta'];
 function ledgerHeaders(){
   return ['No','Name','Welfare','Munno','MunnoReturned','MunnoTaken','LoanTaken','LoanReturned','LoanForm','Period','Interest','LoanBalance','Fines'];
 }
-
-// ===== Export helpers (template-aligned) =====
+// Export helpers
 function membersToRows(){
-  // Always output exactly 30 rows by member number.
   const map = new Map(db.members.map(m=>[Number(m.number), m]));
   const out=[];
   for(let i=1;i<=30;i++){
@@ -653,20 +843,14 @@ function ledgerRows(){
   return rows;
 }
 function computeLedgerRowsFilled(fromStr, toStr){
-  // defaults: current year to today (Kampala timezone)
   const today = new Date().toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
   const yearStart = new Date(new Date().getFullYear(),0,1).toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
   const from = fromStr || yearStart;
   const to = toStr || today;
-
-  // Accrue loans up to 'to' so LoanBalance reflects reality
   accrueAll(to);
-
   const sums = {};
   for(let i=1;i<=30;i++) sums[i] = { No:i, Name:(getMemberByNo(i)?.name)||'', Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0, LoanTaken:0, LoanReturned:0, LoanForm:0, Period:to, Interest:0, LoanBalance:0, Fines:0 };
-
   const inRange = (ts)=>{ const d = new Date(ts); return d>=new Date(from) && d<=new Date(to); };
-
   db.tx.forEach(t=>{
     if(!t.ts || !inRange(t.ts)) return;
     const no = Number(t.memberNo); if(!no) return;
@@ -674,7 +858,7 @@ function computeLedgerRowsFilled(fromStr, toStr){
     switch(t.type){
       case 'welfare': sums[no].Welfare += amt; break;
       case 'munno_deposit': sums[no].Munno += amt; break;
-      case 'munno_withdraw': sums[no].MunnoReturned += amt; break; // legacy combined
+      case 'munno_withdraw': sums[no].MunnoReturned += amt; break;
       case 'munno_returned': sums[no].MunnoReturned += amt; break;
       case 'munno_taken': sums[no].MunnoTaken += amt; break;
       case 'loan_issue':
@@ -685,10 +869,7 @@ function computeLedgerRowsFilled(fromStr, toStr){
       case 'fine': sums[no].Fines += amt; break;
     }
   });
-
-  // Loan balance from live loans
   db.loans.forEach(l=>{ const no=Number(l.memberNo); if(!no) return; sums[no].LoanBalance = (sums[no].LoanBalance||0) + (l.principalOut||0); });
-
   return Object.values(sums);
 }
 function colLetter(n){ let s=''; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; }
@@ -699,8 +880,7 @@ function addTotalsRow(ws, numericCols){
   const lastCol = colLetter(Math.max(...numericCols, 13));
   ws['!ref'] = `A1:${lastCol}${totalRow}`;
 }
-
-// ===== Validation helpers =====
+// Validation helpers
 function readHeaders(ws){
   const r = XLSX.utils.decode_range(ws['!ref']);
   const headers=[];
@@ -723,7 +903,6 @@ function validateWorkbook(XLSX, wb){
   const mustSheets = ['Members','Ledger'];
   mustSheets.forEach(n=>{ if(!wb.Sheets[n]) errs.push(`Missing sheet: ${n}`); });
   if(errs.length) return errs;
-  // Headers
   const hMembers = readHeaders(wb.Sheets['Members']);
   if(!eqArr(hMembers, MEMBERS_HEADERS)) errs.push(`Members headers must be ${MEMBERS_HEADERS.join(', ')}`);
   const hLedger = readHeaders(wb.Sheets['Ledger']);
@@ -736,31 +915,25 @@ function validateWorkbook(XLSX, wb){
     const hTx = readHeaders(wb.Sheets['Transactions']);
     if(!eqArr(hTx, TX_HEADERS)) errs.push(`Transactions headers must be ${TX_HEADERS.join(', ')}`);
   }
-  // 1..30 presence
   const memRows = XLSX.utils.sheet_to_json(wb.Sheets['Members']);
   const ledRows = XLSX.utils.sheet_to_json(wb.Sheets['Ledger']);
   const m1 = validateNoSet(memRows,'Members'); if(m1) errs.push(m1);
   const m2 = validateNoSet(ledRows,'Ledger');  if(m2) errs.push(m2);
   return errs;
 }
-
-// ===== Export buttons =====
+// Export buttons
 async function doExport(includeLedger=true){
   const XLSX = await loadXLSX();
   const wb = XLSX.utils.book_new();
-  // Meta
   const wsMeta = XLSX.utils.aoa_to_sheet([
     ['Template', TEMPLATE_VERSION],
     ['Exported', new Date().toISOString()]
   ]);
   XLSX.utils.book_append_sheet(wb, wsMeta, 'Meta');
-  // Members (1..30)
   const wsMembers = XLSX.utils.json_to_sheet(membersToRows(), {header:MEMBERS_HEADERS});
   XLSX.utils.book_append_sheet(wb, wsMembers, 'Members');
-  // Loans & Transactions
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(loansToRows(), {header:LOANS_HEADERS}), 'Loans');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txToRows(), {header:TX_HEADERS}), 'Transactions');
-  // Ledger (filled)
   if(includeLedger){
     const from = (document.getElementById('ledgerFrom')?.value)||'';
     const to   = (document.getElementById('ledgerTo')?.value)||'';
@@ -770,63 +943,92 @@ async function doExport(includeLedger=true){
   }
   XLSX.writeFile(wb, `kibiina-${new Date().toISOString().slice(0,10)}.xlsx`);
 }
+function wireExcel(){
+  const ex = document.getElementById('btnExportXLSX');
+  if(ex) ex.onclick = async ()=>{ try{ await doExport(true); }catch(err){ alert(err.message||'Failed to export Excel'); } };
+  const exL = document.getElementById('btnExportLedgerXLSX');
+  if(exL) exL.onclick = async ()=>{
+    try{
+      const XLSX = await loadXLSX();
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(ledgerRows(), {header:ledgerHeaders()});
+      addTotalsRow(ws, [3,4,5,6,7,8,9,11,12,13]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Ledger');
+      XLSX.writeFile(wb, `kibiina-ledger-${new Date().toISOString().slice(0,10)}.xlsx`);
+    }catch(err){ alert(err.message||'Failed to export ledger'); }
+  };
+  const exF = document.getElementById('btnExportFilledLedger');
+  if(exF) exF.onclick = ()=> doExport(true);
+  const imp = document.getElementById('importXLSX');
+  if(imp) imp.addEventListener('change', async (e)=>{
+    const f=e.target.files[0]; if(!f) return;
+    try{
+      const XLSX = await loadXLSX();
+      const ab = await f.arrayBuffer();
+      const wb = XLSX.read(ab, {type:'array'});
+      const errs = validateWorkbook(XLSX, wb);
+      if(errs.length){ alert('IMPORT BLOCKED: The workbook does not match the official KIBIINA template.\n\n'+errs.map(x=>'• '+x).join('\n')); e.target.value=''; return; }
+      // Members
+      const memRows = XLSX.utils.sheet_to_json(wb.Sheets['Members']);
+      memRows.forEach(r=>{
+        const no=Number(r.No); if(!no||no<1||no>30) return;
+        let m = getMemberByNo(no);
+        if(!m){ m={ id:'m'+Math.random().toString(36).slice(2,9), number:no, name:'', shares:0, munno:0, joinDate:todayStr() }; db.members.push(m); }
+        if(r.Name!==undefined) m.name=String(r.Name);
+        if(r.JoinDate) m.joinDate=String(r.JoinDate).slice(0,10);
+        if(r.Shares!==undefined) m.shares=Number(r.Shares)||0;
+        if(r.Munno!==undefined) m.munno=Number(r.Munno)||0;
+      });
+      // Loans (optional)
+      if(wb.Sheets['Loans']){
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Loans']);
+        db.loans = [];
+        rows.forEach(r=>{
+          const no=Number(r.No); if(!no||no<1||no>30) return;
+          db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo:no, principalOut:Number(r.PrincipalOut)||0, rateMonthly:Number(r.RateMonthly)||0.02, startDate:String(r.StartDate||todayStr()).slice(0,10), lastAccrual:String(r.LastAccrual||'')||undefined, accruedInterest:Number(r.AccruedInterest)||0 });
+        });
+      }
+      // Transactions (optional)
+      if(wb.Sheets['Transactions']){
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Transactions']);
+        db.tx = rows.map(r=>({ ts:String(r.Date).slice(0,10), memberNo: r.No? Number(r.No): undefined, type:String(r.Type||''), amount: Number(r.Amount)||0, meta: r.Meta? JSON.parse(r.Meta): undefined }));
+      }
+      // Ledger (post)
+      const ledRows = XLSX.utils.sheet_to_json(wb.Sheets['Ledger']);
+      ledRows.forEach(r=>{
+        const no = Number(r.No); if(!no||no<1||no>30) return;
+        const ts = r.Period? String(r.Period).slice(0,10) : todayStr();
+        if(Number(r.Welfare)>0){ db.welfareFund=(db.welfareFund||0)+Number(r.Welfare); db.tx.push({ts, type:'welfare', memberNo:no, amount:Number(r.Welfare)}); }
+        if(Number(r.Munno)>0){ const m=getMemberByNo(no); if(m){ m.munno=(m.munno||0)+Number(r.Munno); db.tx.push({ts, type:'munno_deposit', memberNo:no, amount:Number(r.Munno)}); }}
+        if(Number(r.MunnoReturned)>0){ const m=getMemberByNo(no); const amt=Number(r.MunnoReturned)||0; if(m && amt>0){ m.munno=Math.max(0,(m.munno||0)-amt); db.tx.push({ts, type:'munno_returned', memberNo:no, amount:amt}); }}
+        if(Number(r.MunnoTaken)>0){ const m=getMemberByNo(no); const amt=Number(r.MunnoTaken)||0; if(m && amt>0){ m.munno=Math.max(0,(m.munno||0)-amt); db.tx.push({ts, type:'munno_taken', memberNo:no, amount:amt}); }}
+        if(Number(r.LoanTaken)>0){
+          const amt=Number(r.LoanTaken); let loan = db.loans.find(l=>Number(l.memberNo)===no); accrueAll(ts);
+          if(loan){ loan.principalOut += amt; db.tx.push({ts, type:'loan_topup', memberNo:no, amount:amt}); }
+          else { db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo:no, principalOut:amt, rateMonthly:loanRateFor(amt), startDate:ts, lastAccrual:ts, accruedInterest:0 }); db.tx.push({ts, type:'loan_issue', memberNo:no, amount:amt}); }
+        }
+        if(Number(r.LoanReturned)>0){ const amt=Number(r.LoanReturned); const loan=db.loans.find(l=>Number(l.memberNo)===no); if(loan){ accrueAll(ts); const pay=Math.min(amt, loan.principalOut); loan.principalOut-=pay; db.tx.push({ts, type:'repay_principal', memberNo:no, amount:pay}); }}
+        if(Number(r.Interest)>0){ const amt=Number(r.Interest); const loan=db.loans.find(l=>Number(l.memberNo)===no); if(loan){ accrueAll(ts); const pay=Math.min(amt, loan.accruedInterest||0); loan.accruedInterest=(loan.accruedInterest||0)-pay; db.tx.push({ts, type:'repay_interest', memberNo:no, amount:pay}); }}
+        if(Number(r.LoanForm)>0){ db.tx.push({ts, type:'loan_form_fee', memberNo:no, amount:Number(r.LoanForm)}); }
+        if(Number(r.Fines)>0){ db.tx.push({ts, type:'fine', memberNo:no, amount:Number(r.Fines)}); }
+      });
+      save(); e.target.value=''; renderMembers(); renderLoans(); renderRepay(); renderDashboard(); alert('Excel imported successfully.');
+    }catch(err){ console.error(err); alert('Failed to import Excel: '+(err.message||err)); }
+  });
+}
 
-document.getElementById('btnExportXLSX').onclick = async ()=>{ try{ await doExport(true); }catch(err){ alert(err.message||'Failed to export Excel'); } };
-
-document.getElementById('btnExportLedgerXLSX').onclick = async ()=>{
-  try{ const XLSX = await loadXLSX(); const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet(ledgerRows(), {header:ledgerHeaders()}); addTotalsRow(ws, [3,4,5,6,7,8,9,11,12,13]); XLSX.utils.book_append_sheet(wb, ws, 'Ledger'); XLSX.writeFile(wb, `kibiina-ledger-${new Date().toISOString().slice(0,10)}.xlsx`); }
-  catch(err){ alert(err.message||'Failed to export ledger'); }
-};
-
-// ===== Import button (STRICT validation) =====
-document.getElementById('importXLSX').addEventListener('change', async (e)=>{
-  const f=e.target.files[0]; if(!f) return;
-  try{
-    const XLSX = await loadXLSX();
-    const ab = await f.arrayBuffer();
-    const wb = XLSX.read(ab, {type:'array'});
-
-    const errs = validateWorkbook(XLSX, wb);
-    if(errs.length){ alert('IMPORT BLOCKED: The workbook does not match the official KIBIINA template.
-
-'+errs.map(x=>'• '+x).join('
-')); e.target.value=''; return; }
-
-    // Members
-    const memRows = XLSX.utils.sheet_to_json(wb.Sheets['Members']);
-    memRows.forEach(r=>{ const no=Number(r.No); if(!no||no<1||no>30) return; let m = getMemberByNo(no); if(!m){ m={ id:'m'+Math.random().toString(36).slice(2,9), number:no, name:'', shares:0, munno:0, joinDate:todayStr() }; db.members.push(m); } if(r.Name!==undefined) m.name=String(r.Name); if(r.JoinDate) m.joinDate=String(r.JoinDate).slice(0,10); if(r.Shares!==undefined) m.shares=Number(r.Shares)||0; if(r.Munno!==undefined) m.munno=Number(r.Munno)||0; });
-
-    // Loans (optional)
-    if(wb.Sheets['Loans']){ const rows = XLSX.utils.sheet_to_json(wb.Sheets['Loans']); db.loans = []; rows.forEach(r=>{ const no=Number(r.No); if(!no||no<1||no>30) return; db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo:no, principalOut:Number(r.PrincipalOut)||0, rateMonthly:Number(r.RateMonthly)||0.02, startDate:String(r.StartDate||todayStr()).slice(0,10), lastAccrual:String(r.LastAccrual||'')||undefined, accruedInterest:Number(r.AccruedInterest)||0 }); }); }
-
-    // Transactions (optional)
-    if(wb.Sheets['Transactions']){ const rows = XLSX.utils.sheet_to_json(wb.Sheets['Transactions']); db.tx = rows.map(r=>({ ts:String(r.Date).slice(0,10), memberNo: r.No? Number(r.No): undefined, type:String(r.Type||''), amount: Number(r.Amount)||0, meta: r.Meta? JSON.parse(r.Meta): undefined })); }
-
-    // Ledger
-    const ledRows = XLSX.utils.sheet_to_json(wb.Sheets['Ledger']);
-    ledRows.forEach(r=>{ const no = Number(r.No); if(!no||no<1||no>30) return; const ts = r.Period? String(r.Period).slice(0,10) : todayStr(); if(Number(r.Welfare)>0){ db.welfareFund=(db.welfareFund||0)+Number(r.Welfare); db.tx.push({ts, type:'welfare', memberNo:no, amount:Number(r.Welfare)}); } if(Number(r.Munno)>0){ const m=getMemberByNo(no); if(m){ m.munno=(m.munno||0)+Number(r.Munno); db.tx.push({ts, type:'munno_deposit', memberNo:no, amount:Number(r.Munno)}); }} if(Number(r.MunnoReturned)>0){ const m=getMemberByNo(no); const amt=Number(r.MunnoReturned)||0; if(m && amt>0){ m.munno=Math.max(0,(m.munno||0)-amt); db.tx.push({ts, type:'munno_returned', memberNo:no, amount:amt}); }} if(Number(r.MunnoTaken)>0){ const m=getMemberByNo(no); const amt=Number(r.MunnoTaken)||0; if(m && amt>0){ m.munno=Math.max(0,(m.munno||0)-amt); db.tx.push({ts, type:'munno_taken', memberNo:no, amount:amt}); }} if(Number(r.LoanTaken)>0){ const amt=Number(r.LoanTaken); let loan = db.loans.find(l=>Number(l.memberNo)===no); accrueAll(ts); if(loan){ loan.principalOut += amt; db.tx.push({ts, type:'loan_topup', memberNo:no, amount:amt}); } else { db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo:no, principalOut:amt, rateMonthly:loanRateFor(amt), startDate:ts, lastAccrual:ts, accruedInterest:0 }); db.tx.push({ts, type:'loan_issue', memberNo:no, amount:amt}); } } if(Number(r.LoanReturned)>0){ const amt=Number(r.LoanReturned); const loan=db.loans.find(l=>Number(l.memberNo)===no); if(loan){ accrueAll(ts); const pay=Math.min(amt, loan.principalOut); loan.principalOut-=pay; db.tx.push({ts, type:'repay_principal', memberNo:no, amount:pay}); }} if(Number(r.Interest)>0){ const amt=Number(r.Interest); const loan=db.loans.find(l=>Number(l.memberNo)===no); if(loan){ accrueAll(ts); const pay=Math.min(amt, loan.accruedInterest||0); loan.accruedInterest=(loan.accruedInterest||0)-pay; db.tx.push({ts, type:'repay_interest', memberNo:no, amount:pay}); }} if(Number(r.LoanForm)>0){ db.tx.push({ts, type:'loan_form_fee', memberNo:no, amount:Number(r.LoanForm)}); } if(Number(r.Fines)>0){ db.tx.push({ts, type:'fine', memberNo:no, amount:Number(r.Fines)}); } });
-
-    save(); e.target.value=''; renderMembers(); renderLoans(); renderRepay(); renderDashboard(); alert('Excel imported successfully.');
-  }catch(err){ console.error(err); alert('Failed to import Excel: '+(err.message||err)); }
-});
-
-/* ========= Self‑Test ========= */
-function diag(msg, ok=true){ const box=document.getElementById('diagOut'); if(!box) return; const line = (ok? '✅ ':'❌ ')+msg+'
-'; box.textContent += line; }
+/* ========= Self-Test ========= */
+function diag(msg, ok=true){ const box=document.getElementById('diagOut'); if(!box) return; const line = (ok? '✅ ':'❌ ')+msg+'\n'; box.textContent += line; }
 function clearDiag(){ const box=document.getElementById('diagOut'); if(box) box.textContent=''; }
 function assert(cond, msg){ cond? diag(msg, true): diag(msg, false); return !!cond; }
-
 async function runSelfTest(){
   clearDiag();
-  diag('Starting self‑test...');
+  diag('Starting self-test...');
   const snap = clone(db);
   try{
-    // 1) Create numbered members 1–30
     db.members = []; for(let i=1;i<=30;i++){ db.members.push({ id:'m'+Math.random().toString(36).slice(2,9), number:i, name:`Member ${i}`, shares:5, munno:0, joinDate:todayStr() }); }
     db.loans = []; db.tx = []; db.welfareFund = 0; save();
     assert(db.members.length===30, '30 members created');
-
-    // 2) Post some activity
     const d = todayStr();
     db.tx.push({ts:d, type:'welfare', memberNo:1, amount:1500}); db.welfareFund+=1500;
     db.tx.push({ts:d, type:'munno_deposit', memberNo:1, amount:10000}); getMemberByNo(1).munno+=10000;
@@ -835,8 +1037,6 @@ async function runSelfTest(){
     db.tx.push({ts:d, type:'repay_interest', memberNo:1, amount:10000}); db.loans[0].accruedInterest = Math.max(0,(db.loans[0].accruedInterest||0)-10000);
     db.tx.push({ts:d, type:'repay_principal', memberNo:1, amount:50000}); db.loans[0].principalOut -= 50000;
     db.tx.push({ts:d, type:'fine', memberNo:1, amount:2000});
-
-    // 3) Ledger filled
     const rows = computeLedgerRowsFilled(d, d);
     assert(rows.length===30, 'Ledger has 30 rows');
     const r1 = rows.find(r=>r.No===1);
@@ -844,225 +1044,52 @@ async function runSelfTest(){
     assert(r1.Munno===10000, 'Munno deposit matched');
     assert(r1.LoanTaken>=500000 || db.tx.some(t=>t.type==='loan_issue'), 'Loan taken recorded (or issued)');
     assert(r1.Interest>=0, 'Interest captured');
-
-    // 4) Export workbook & check headers (if XLSX available)
-    try{ const XLSX = await loadXLSX(); const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet(rows, {header:ledgerHeaders()}); addTotalsRow(ws,[3,4,5,6,7,8,9,11,12,13]); const h = readHeaders(ws); assert(eqArr(h, ledgerHeaders()), 'Ledger headers correct'); assert(ws['A32'] && ws['A32'].v==='TOTALS', 'Totals row present'); }catch(err){ diag('Skipped XLSX checks (offline): '+(err.message||err), false); }
-
-    diag('Self‑test complete. If all checks are green, the app is functioning.');
-  }catch(err){ diag('Self‑test failed: '+(err.message||err), false); }
+    try{
+      const XLSX = await loadXLSX();
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(rows, {header:ledgerHeaders()});
+      addTotalsRow(ws,[3,4,5,6,7,8,9,11,12,13]);
+      const h = readHeaders(ws);
+      assert(eqArr(h, ledgerHeaders()), 'Ledger headers correct');
+      assert(ws['A32'] && ws['A32'].v==='TOTALS', 'Totals row present');
+    }catch(err){ diag('Skipped XLSX checks (offline): '+(err.message||err), false); }
+    diag('Self-test complete. If all checks are green, the app is functioning.');
+  }catch(err){ diag('Self-test failed: '+(err.message||err), false); }
   finally { db = snap; save(); renderMembers(); renderLoans(); renderRepay(); renderDashboard(); }
 }
+function wireSelfTest(){
+  const st = document.getElementById('btnSelfTest');
+  if(st) st.addEventListener('click', runSelfTest);
+}
 
-document.getElementById('btnSelfTest').addEventListener('click', runSelfTest);
-
-/* ========= Initial render ========= */
-// Initialize default period for filled ledger (YTD)
-(function initExcelCard(){
+/* ========= Initial boot ========= */
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Default ledger date range (YTD)
   const y = new Date().getFullYear();
   const from = new Date(y,0,1).toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
   const to = new Date().toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
   const lf = document.getElementById('ledgerFrom'); if(lf) lf.value = from;
   const lt = document.getElementById('ledgerTo');   if(lt) lt.value = to;
-})();
 
-renderMembers();
-initMeeting();
-renderLoans();
-renderRepay();
-initReports();
+  wireTabs();
+  wireMembers();
+  wireMeeting();
+  wireLoans();
+  wireRepay();
+  wireReports();
+  wireBackup();
+  wireExcel();
+  wireSelfTest();
 
-/* ===== Compatibility overrides to ensure buttons & flows work ===== */
-function renderMembers(){
-  const tbody = document.querySelector('#membersTable tbody');
-  tbody.innerHTML = '';
-  const list = [...db.members].sort((a,b)=> Number(a.number||999)-Number(b.number||999));
-  list.forEach((m)=>{
-    const shareCap = (m.shares||0)*3000;
-    const loan = db.loans.find(l=> l.memberId===m.id || Number(l.memberNo)===Number(m.number));
-    const principalOut = loan? loan.principalOut : 0;
-    const limit = Math.max(0, (shareCap*2) - principalOut);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${m.number||''}</td>
-      <td>${m.name||''}</td>
-      <td>${m.shares||0}</td>
-      <td>${UGX(shareCap)}</td>
-      <td>${UGX(m.munno||0)}</td>
-      <td>${UGX(principalOut)}</td>
-      <td>${UGX(limit)}</td>
-      <td><button class="btn" data-edit="${m.id}">Edit</button></td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderLoans(){
-  // dropdown by member number
-  const sel = document.getElementById('loanMember');
-  const options = [...db.members].sort((a,b)=> Number(a.number||999)-Number(b.number||999))
-    .map(m=>`<option value="${m.number}">${m.number||''}. ${m.name||''}</option>`).join('');
-  sel.innerHTML = options;
-  document.getElementById('loanAmt').value='';
-  document.getElementById('loanDate').value = todayStr();
-  document.getElementById('loanHint').textContent='';
-  // table
-  const tbody = document.querySelector('#loansTable tbody');
-  tbody.innerHTML='';
-  db.loans.forEach(l=>{
-    const m = getMemberByNo(l.memberNo) || db.members.find(x=>x.id===l.memberId);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${m? (m.number+'. '+(m.name||'')):'?'}</td>
-      <td>${UGX(l.principalOut)}</td>
-      <td>${UGX(l.accruedInterest||0)}</td>
-      <td>${(l.rateMonthly*100).toFixed(2)}%/mo</td>
-      <td>${l.startDate}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-document.getElementById('loanAmt').oninput = ()=>{
-  const no = Number(document.getElementById('loanMember').value);
-  const m = getMemberByNo(no); if(!m) { document.getElementById('loanHint').textContent=''; return; }
-  const amount = parseInt(document.getElementById('loanAmt').value||0);
-  const shareCap = (m.shares||0)*3000;
-  const currentLoan = getLoanByMemberNo(no);
-  const principalOut = currentLoan? currentLoan.principalOut : 0;
-  const limit = Math.max(0, shareCap*2 - principalOut);
-  const rate = loanRateFor(amount);
-  document.getElementById('loanHint').innerHTML =
-    `Share capital: <b>${UGX(shareCap)}</b> → Limit: <b>${UGX(limit)}</b> • Proposed rate: <b>${(rate*100)||0}%/mo</b>`;
-};
-
-document.getElementById('btnIssueLoan').onclick = ()=>{
-  const no = Number(document.getElementById('loanMember').value);
-  const m = getMemberByNo(no);
-  if(!m){ alert('Select member'); return; }
-  const amount = parseInt(document.getElementById('loanAmt').value||0);
-  const date = document.getElementById('loanDate').value || todayStr();
-  if(amount<=0){ alert('Enter amount'); return; }
-  // check limit
-  const current = getLoanByMemberNo(no);
-  const principalOut = current? current.principalOut : 0;
-  const limit = Math.max(0, ((m.shares||0)*3000)*2 - principalOut);
-  if(amount>limit){ alert('Amount exceeds limit.'); return; }
-  const rate = loanRateFor(amount);
-  accrueAll(date);
-  if(current){
-    current.principalOut += amount;
-    db.tx.push({ts:date, type:'loan_topup', memberNo:no, amount:amount});
-  }else{
-    db.loans.push({
-      id: 'L'+Math.random().toString(36).slice(2,9),
-      memberNo: no,
-      memberId: m.id, // for backward compat
-      principalOut: amount,
-      rateMonthly: rate,
-      startDate: date,
-      lastAccrual: date,
-      accruedInterest: 0
-    });
-    db.tx.push({ts:date, type:'loan_issue', memberNo:no, amount:amount});
-  }
-  save(); renderLoans(); renderDashboard(); alert('Loan recorded.');
-};
-
-function renderRepay(){
-  const sel = document.getElementById('rpMember');
-  const withLoans = [];
-  for(let i=1;i<=30;i++){ const l=getLoanByMemberNo(i); if(l && (l.principalOut>0 || (l.accruedInterest||0)>0)) withLoans.push(i); }
-  sel.innerHTML = withLoans.map(no=>{ const m=getMemberByNo(no); return `<option value="${no}">${no}. ${m? m.name:''}</option>`; }).join('');
-  document.getElementById('rpAmt').value='';
-  document.getElementById('rpDate').value = todayStr();
-  document.getElementById('rpApply').value = 'auto';
-  // tx table (recent 15)
-  const tbody = document.querySelector('#txTable tbody');
-  const last = clone(db.tx).sort((a,b)=> new Date(b.ts) - new Date(a.ts)).slice(0,15);
-  tbody.innerHTML = last.map(t=>{
-    let m = null;
-    if(t.memberNo){ m = getMemberByNo(t.memberNo); }
-    else if(t.memberId){ m = db.members.find(x=>x.id===t.memberId); }
-    return `<tr><td>${t.ts}</td><td>${m? (m.name|| (m.number? ('#'+m.number):'')) : ''}</td><td>${t.type}</td><td>${UGX(t.amount)}</td></tr>`;
-  }).join('');
-}
-
-document.getElementById('btnPostRepay').onclick = ()=>{
-  const no = Number(document.getElementById('rpMember').value);
-  const amt = parseInt(document.getElementById('rpAmt').value||0);
-  const date = document.getElementById('rpDate').value || todayStr();
-  const how = document.getElementById('rpApply').value;
-  if(amt<=0){ alert('Enter amount'); return; }
-  const loan = getLoanByMemberNo(no);
-  if(!loan){ alert('No active loan'); return; }
-  accrueAll(date);
-  let remain = amt;
-  if(how==='auto' || how==='interest'){
-    const payInt = Math.min(loan.accruedInterest||0, remain);
-    if(payInt>0){ loan.accruedInterest -= payInt; db.tx.push({ts:date, type:'repay_interest', memberNo:no, amount:payInt}); remain -= payInt; }
-  }
-  if((how==='auto' || how==='principal') && remain>0){
-    const payP = Math.min(loan.principalOut, remain);
-    if(payP>0){ loan.principalOut -= payP; db.tx.push({ts:date, type:'repay_principal', memberNo:no, amount:payP}); remain -= payP; }
-  }
-  save(); renderRepay(); renderLoans(); renderDashboard();
-  alert('Repayment posted.');
-};
-
-// Override: compute ledger with memberId fallback as well
-function computeLedgerRowsFilled(fromStr, toStr){
-  const today = new Date().toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
-  const yearStart = new Date(new Date().getFullYear(),0,1).toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
-  const from = fromStr || yearStart;
-  const to = toStr || today;
-  accrueAll(to);
-  const sums = {}; for(let i=1;i<=30;i++) sums[i] = { No:i, Name:(getMemberByNo(i)?.name)||'', Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0, LoanTaken:0, LoanReturned:0, LoanForm:0, Period:to, Interest:0, LoanBalance:0, Fines:0 };
-  const inRange = (ts)=>{ const d = new Date(ts); return d>=new Date(from) && d<=new Date(to); };
-  db.tx.forEach(t=>{
-    if(!t.ts || !inRange(t.ts)) return;
-    let no = t.memberNo? Number(t.memberNo) : 0;
-    if(!no && t.memberId){ const mm = db.members.find(x=>x.id===t.memberId); if(mm && mm.number) no = Number(mm.number); }
-    if(!no) return;
-    const amt = Number(t.amount)||0;
-    switch(t.type){
-      case 'welfare': sums[no].Welfare += amt; break;
-      case 'munno_deposit': sums[no].Munno += amt; break;
-      case 'munno_withdraw': sums[no].MunnoReturned += amt; break;
-      case 'munno_returned': sums[no].MunnoReturned += amt; break;
-      case 'munno_taken': sums[no].MunnoTaken += amt; break;
-      case 'loan_issue':
-      case 'loan_topup': sums[no].LoanTaken += amt; break;
-      case 'repay_principal': sums[no].LoanReturned += amt; break;
-      case 'loan_form_fee': sums[no].LoanForm += amt; break;
-      case 'repay_interest': sums[no].Interest += amt; break;
-      case 'fine': sums[no].Fines += amt; break;
-    }
-  });
-  db.loans.forEach(l=>{ const no= l.memberNo? Number(l.memberNo): (function(){ const m=db.members.find(x=>x.id===l.memberId); return m? Number(m.number):0; })(); if(!no) return; sums[no].LoanBalance = (sums[no].LoanBalance||0) + (l.principalOut||0); });
-  return Object.values(sums);
-}
-
-// Wire extra export button if present
-const _btnFilled = document.getElementById('btnExportFilledLedger');
-if(_btnFilled){ _btnFilled.onclick = ()=> doExport(true); }
-
-// Create 30 default members with Nos 1..30
-const _btnCreate30 = document.getElementById('btnCreate30');
-if(_btnCreate30){
-  _btnCreate30.onclick = ()=>{
-    if(db.members.length && !confirm('Fill missing numbers up to 30? (Existing members kept)')) return;
-    const used = new Set(db.members.map(m=> Number(m.number)).filter(Boolean));
-    for(let i=1;i<=30;i++){
-      if(!used.has(i)){
-        const id='m'+Math.random().toString(36).slice(2,9);
-        db.members.push({id, number:i, name:`Member ${i}`, shares:0, munno:0, joinDate:todayStr()});
-      }
-    }
-    save(); renderMembers(); renderDashboard();
-  };
-}
-
-// Re-render with overrides active
-renderDashboard();
-renderMembers();
-renderLoans();
-renderRepay();
+  renderDashboard();
+  renderMembers();
+  initMeeting();
+  renderLoans();
+  renderRepay();
+  initReports();
+});
 </script>
 </body>
 </html>
+
+<!-- PART 2 (script) goes right below -->
