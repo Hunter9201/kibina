@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KIBIINA – Savings & Loans (Members 1–30 + Excel + Registrar)</title>
-<meta name="description" content="Kibiina saving group app: members identified by numbers 1–30, Excel import/export, registrar with files, local backup, loans, meetings, reports.">
+<title>KIBIINA – Savings & Loans (Members 1–30 + Excel + Registrar + Drive Sync)</title>
+<meta name="description" content="Kibiina saving group app: members identified by numbers 1–30, Excel import/export, registrar with files, Google Drive cloud backup, loans, meetings, reports.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -412,13 +412,14 @@
     <section id="data" class="tabpanel" hidden>
       <div class="grid-2">
         <div class="card">
-          <h3>Backup / Restore</h3>
+          <h3>Backup / Restore (Local JSON)</h3>
           <div class="stack">
             <button class="btn primary" id="btnBackup2">Export JSON</button>
             <label class="btn"><input type="file" id="restoreFile2" accept="application/json" style="display:none">Import JSON</label>
           </div>
-          <p class="help">Exports all members, loans, transactions, and settings.</p>
+          <p class="help">Exports all members, loans, transactions, and settings to a JSON file stored on your device.</p>
         </div>
+
         <div class="card">
           <h3>Excel Import / Export</h3>
           <div class="stack">
@@ -439,8 +440,27 @@
               <button class="btn" id="btnExportFilledLedger">Export Ledger (Filled)</button>
             </div>
           </div>
-          <p class="help">Uses the <b>official KIBIINA template</b> for all imports & exports. Ledger has 30 rows (No. 1–30) and a TOTALS row with SUM formulas.</p>
+          <p class="help">Uses the official template. Ledger has 30 rows (No. 1–30) plus a TOTALS row.</p>
         </div>
+
+        <!-- Cloud Sync (Google Drive) -->
+        <div class="card">
+          <h3>Cloud Sync (Google Drive)</h3>
+          <div class="stack">
+            <button class="btn" id="btnGSignIn">Sign in with Google</button>
+            <button class="btn" id="btnCloudSave" disabled>Save to Google Drive</button>
+            <button class="btn" id="btnCloudLoad" disabled>Load from Google Drive</button>
+            <button class="btn bad" id="btnGSignOut" disabled>Sign out</button>
+          </div>
+          <div class="stack" style="margin-top:8px">
+            <span id="cloudStatus" class="pill">Signed out</span>
+          </div>
+          <p class="help">
+            Saves a file named <b>kibiina-backup.json</b> in your Google Drive (only this app can manage it).
+            After any import, we also auto-save to Drive so you can restore on any device.
+          </p>
+        </div>
+
         <div class="card">
           <h3>Self-Test / Diagnostics</h3>
           <div class="stack">
@@ -449,6 +469,7 @@
           <div id="diagOut" class="mono" style="margin-top:8px"></div>
           <p class="help">Checks: numbered members 1–30, loans & interest, ledger fill, Excel template.</p>
         </div>
+
         <div class="card">
           <h3>Danger Zone</h3>
           <button class="btn bad" id="btnWipe">Reset ALL data</button>
@@ -458,7 +479,6 @@
     </section>
   </main>
 
-<!-- PART 2 (script) goes right below -->
 <script>
 /* ========= Utilities ========= */
 const UGX = (v)=> new Intl.NumberFormat('en-UG', {style:'currency', currency:'UGX', maximumFractionDigits:0}).format(v||0);
@@ -478,11 +498,15 @@ if(!db.members){ // initialize
     loans: [],   // {id, memberNo, principalOut, rateMonthly, startDate, lastAccrual, accruedInterest}
     welfareFund: 0,
     tx: [],      // {ts, type, memberNo, amount, meta}
-    settings: { lastMeetingDate: todayStr() }
+    settings: { lastMeetingDate: todayStr(), updatedAt: new Date().toISOString() }
   };
   save();
 }
-function save(){ localStorage.setItem(KEY, JSON.stringify(db)); }
+function save(){
+  if(!db.settings) db.settings = {};
+  db.settings.updatedAt = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(db));
+}
 
 // Helpers for members
 function getMemberByNo(no){ return db.members.find(m => Number(m.number) === Number(no)); }
@@ -504,6 +528,7 @@ function wireTabs(){
     if(b.dataset.tab==='repay')    { accrueAll(); renderRepay(); }
     if(b.dataset.tab==='reports')  { accrueAll(); initReports(); }
     if(b.dataset.tab==='meeting')  initMeeting();
+    if(b.dataset.tab==='data')     { /* nothing extra on open */ }
   });
 }
 
@@ -872,7 +897,7 @@ function wireReports(){
   }
 }
 
-/* ========= Backup/Restore (JSON) ========= */
+/* ========= Backup/Restore (JSON) + Excel ========= */
 function download(filename, blob){
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -892,14 +917,17 @@ function wireBackup(){
   const wipe = document.getElementById('btnWipe');
   if(wipe) wipe.onclick = ()=>{ if(!confirm('This will delete ALL data. Continue?')) return; localStorage.removeItem(KEY); location.reload(); };
 }
-function handleRestore(e){
+async function handleRestore(e){
   const f = e.target.files[0]; if(!f) return;
   const r = new FileReader();
-  r.onload = ()=>{
+  r.onload = async ()=>{
     try{
       const obj = JSON.parse(r.result);
       if(!obj.members||!obj.loans||!obj.tx){ alert('Invalid file'); return;}
-      db = obj; save(); location.reload();
+      db = obj; save();
+      renderDashboard(); renderMembers(); initMeeting(); renderLoans(); renderRepay(); initReports();
+      await maybeDriveAutoSave(); // auto-save to Drive
+      alert('JSON imported and saved to Google Drive.');
     }catch(err){ alert('Invalid JSON'); }
   };
   r.readAsText(f);
@@ -1071,6 +1099,7 @@ function wireExcel(){
   };
   const exF = document.getElementById('btnExportFilledLedger');
   if(exF) exF.onclick = ()=> doExport(true);
+
   const imp = document.getElementById('importXLSX');
   if(imp) imp.addEventListener('change', async (e)=>{
     const f=e.target.files[0]; if(!f) return;
@@ -1079,7 +1108,8 @@ function wireExcel(){
       const ab = await f.arrayBuffer();
       const wb = XLSX.read(ab, {type:'array'});
       const errs = validateWorkbook(XLSX, wb);
-      if(errs.length){ alert('IMPORT BLOCKED: The workbook does not match the official KIBIINA template.\n\n'+errs.map(x=>'• '+x).join('\n')); e.target.value=''; return; }
+      if(errs.length){ alert('IMPORT BLOCKED: Template mismatch.\n\n'+errs.map(x=>'• '+x).join('\n')); e.target.value=''; return; }
+
       // Members
       const memRows = XLSX.utils.sheet_to_json(wb.Sheets['Members']);
       memRows.forEach(r=>{
@@ -1091,21 +1121,38 @@ function wireExcel(){
         if(r.Shares!==undefined) m.shares=Number(r.Shares)||0;
         if(r.Munno!==undefined) m.munno=Number(r.Munno)||0;
       });
+
       // Loans (optional)
       if(wb.Sheets['Loans']){
         const rows = XLSX.utils.sheet_to_json(wb.Sheets['Loans']);
         db.loans = [];
         rows.forEach(r=>{
           const no=Number(r.No); if(!no||no<1||no>30) return;
-          db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo:no, principalOut:Number(r.PrincipalOut)||0, rateMonthly:Number(r.RateMonthly)||0.02, startDate:String(r.StartDate||todayStr()).slice(0,10), lastAccrual:String(r.LastAccrual||'')||undefined, accruedInterest:Number(r.AccruedInterest)||0 });
+          db.loans.push({
+            id:'L'+Math.random().toString(36).slice(2,9),
+            memberNo:no,
+            principalOut:Number(r.PrincipalOut)||0,
+            rateMonthly:Number(r.RateMonthly)||0.02,
+            startDate:String(r.StartDate||todayStr()).slice(0,10),
+            lastAccrual:String(r.LastAccrual||'')||undefined,
+            accruedInterest:Number(r.AccruedInterest)||0
+          });
         });
       }
+
       // Transactions (optional)
       if(wb.Sheets['Transactions']){
         const rows = XLSX.utils.sheet_to_json(wb.Sheets['Transactions']);
-        db.tx = rows.map(r=>({ ts:String(r.Date).slice(0,10), memberNo: r.No? Number(r.No): undefined, type:String(r.Type||''), amount: Number(r.Amount)||0, meta: r.Meta? JSON.parse(r.Meta): undefined }));
+        db.tx = rows.map(r=>({
+          ts:String(r.Date).slice(0,10),
+          memberNo: r.No? Number(r.No): undefined,
+          type:String(r.Type||''),
+          amount: Number(r.Amount)||0,
+          meta: r.Meta? JSON.parse(r.Meta): undefined
+        }));
       }
-      // Ledger (post)
+
+      // Ledger post (apply)
       const ledRows = XLSX.utils.sheet_to_json(wb.Sheets['Ledger']);
       ledRows.forEach(r=>{
         const no = Number(r.No); if(!no||no<1||no>30) return;
@@ -1124,8 +1171,17 @@ function wireExcel(){
         if(Number(r.LoanForm)>0){ db.tx.push({ts, type:'loan_form_fee', memberNo:no, amount:Number(r.LoanForm)}); }
         if(Number(r.Fines)>0){ db.tx.push({ts, type:'fine', memberNo:no, amount:Number(r.Fines)}); }
       });
-      save(); e.target.value=''; renderMembers(); renderLoans(); renderRepay(); renderDashboard(); alert('Excel imported successfully.');
-    }catch(err){ console.error(err); alert('Failed to import Excel: '+(err.message||err)); }
+
+      save();
+      renderDashboard(); renderMembers(); initMeeting(); renderLoans(); renderRepay(); initReports();
+
+      await maybeDriveAutoSave(); // auto-save to Drive
+      alert('Excel imported and saved to Google Drive.');
+      e.target.value='';
+    }catch(err){
+      console.error(err);
+      alert('Failed to import Excel: '+(err.message||err));
+    }
   });
 }
 
@@ -1174,17 +1230,7 @@ function wireSelfTest(){
   if(st) st.addEventListener('click', runSelfTest);
 }
 
-/* ========= Registrar: data shape & migration =========
-Each member may have:
-  member.registrar = {
-    regDate, fullName, phone, natId, nationality, residence,
-    nextOfKin: { name, relation, phone, address },
-    passportPhotoIds: [fileId,...],
-    bylawsFileId: string|null,
-    regFormFileId: string|null,
-    otherDocIds: [fileId,...]
-  }
-*/
+/* ========= Registrar: data shape & migration ========= */
 function ensureRegistrar(m){
   if(!m.registrar){
     m.registrar = {
@@ -1258,7 +1304,6 @@ async function fileDownload(id){
 
 /* ========= Registrar: render & wire ========= */
 function renderRegistrar(){
-  // populate member list
   const sel = document.getElementById('regMemberNo');
   if(!sel) return;
   sel.innerHTML = [...db.members].sort((a,b)=>Number(a.number)-Number(b.number))
@@ -1442,8 +1487,182 @@ function wireRegistrar(){
   }
 }
 
+/* ======== Google Drive Config & Sync ======== */
+const GOOGLE_CLIENT_ID = "1012401719257-nm0hj0h1na9d7tm8eat4tllgigjrbir0.apps.googleusercontent.com";
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const DRIVE_FILE_NAME = "kibiina-backup.json";
+
+let driveAccessToken = null;
+let driveTokenClient = null;
+let driveSignedIn = false;
+
+function loadGIS(){
+  return new Promise((resolve,reject)=>{
+    if(window.google && window.google.accounts){ return resolve(); }
+    const s = document.createElement('script');
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true; s.defer = true;
+    s.onload = resolve; s.onerror = ()=>reject(new Error("Failed to load Google Identity Services"));
+    document.head.appendChild(s);
+  });
+}
+function setCloudStatus(text, good=false){
+  const el = document.getElementById('cloudStatus');
+  if(!el) return;
+  el.textContent = text;
+  el.className = 'pill ' + (good ? '' : '');
+}
+function setCloudButtons(enabled){
+  ['btnCloudSave','btnCloudLoad','btnGSignOut'].forEach(id=>{
+    const b = document.getElementById(id); if(b) b.disabled = !enabled;
+  });
+}
+async function initDrive(){
+  await loadGIS();
+  driveTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    callback: (resp)=>{
+      if(resp && resp.access_token){
+        driveAccessToken = resp.access_token;
+        driveSignedIn = true;
+        setCloudStatus("Signed in • Ready", true);
+        setCloudButtons(true);
+      }
+    }
+  });
+  try{ driveTokenClient.requestAccessToken({prompt: ""}); }catch(_){}
+}
+function driveEnsureToken(interactive=true){
+  return new Promise((res)=>{
+    if(driveAccessToken){ return res(true); }
+    if(!driveTokenClient){ setCloudStatus("Cloud not ready"); return res(false); }
+    const opts = interactive ? {} : {prompt:""};
+    driveTokenClient.callback = (resp)=>{
+      if(resp && resp.access_token){
+        driveAccessToken = resp.access_token;
+        driveSignedIn = true;
+        setCloudStatus("Signed in • Ready", true);
+        setCloudButtons(true);
+        return res(true);
+      }
+      res(false);
+    };
+    driveTokenClient.requestAccessToken(opts);
+  });
+}
+function driveSignOut(){
+  driveAccessToken = null;
+  driveSignedIn = false;
+  setCloudButtons(false);
+  setCloudStatus("Signed out");
+}
+async function driveFindBackup(){
+  const q = encodeURIComponent(`name='${DRIVE_FILE_NAME}' and mimeType='application/json' and trashed=false`);
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`;
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${driveAccessToken}` }});
+  if(!r.ok) throw new Error(await r.text());
+  const j = await r.json();
+  return (j.files && j.files[0]) ? j.files[0] : null;
+}
+async function driveDownloadFile(fileId){
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    headers: { Authorization: `Bearer ${driveAccessToken}` }
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return r.text();
+}
+function makeMultipartBody(meta, contentStr, mime="application/json"){
+  const boundary = "-------kibiina" + Math.random().toString(36).slice(2);
+  const delimiter = `\r\n--${boundary}\r\n`;
+  const close = `\r\n--${boundary}--`;
+  const body =
+    delimiter +
+    "Content-Type: application/json; charset=UTF-8\r\n\r\n" +
+    JSON.stringify(meta) +
+    delimiter +
+    `Content-Type: ${mime}\r\n\r\n` +
+    contentStr +
+    close;
+  const headers = { "Content-Type": `multipart/related; boundary=${boundary}`, "Authorization": `Bearer ${driveAccessToken}` };
+  return { body, headers };
+}
+async function driveCreateBackup(jsonStr){
+  const meta = { name: DRIVE_FILE_NAME, mimeType: "application/json" };
+  const { body, headers } = makeMultipartBody(meta, jsonStr);
+  const url = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+  const r = await fetch(url, { method:"POST", headers, body });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function driveUpdateBackup(fileId, jsonStr){
+  const meta = { mimeType: "application/json" };
+  const { body, headers } = makeMultipartBody(meta, jsonStr);
+  const url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`;
+  const r = await fetch(url, { method:"PATCH", headers, body });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function driveSave(showToast=true){
+  const ok = await driveEnsureToken(true); if(!ok){ alert("Please sign in to Google first."); return; }
+  const btn = document.getElementById('btnCloudSave');
+  try{
+    const json = JSON.stringify(db, null, 2);
+    const existing = await driveFindBackup();
+    if(existing){ await driveUpdateBackup(existing.id, json); }
+    else { await driveCreateBackup(json); }
+    if(btn){ btn.textContent = "Data saved ✓"; setTimeout(()=> btn.textContent="Save to Google Drive", 2500); }
+    const t = new Date().toLocaleString('en-UG', { timeZone:'Africa/Kampala' });
+    setCloudStatus(`Last saved: ${t}`, true);
+  }catch(err){
+    console.error(err);
+    alert("Failed to save to Google Drive:\n"+(err.message||err));
+    if(btn) btn.textContent = "Save to Google Drive";
+  }
+}
+async function driveLoad(silent=false){
+  const ok = await driveEnsureToken(!silent); if(!ok){ if(!silent) alert("Please sign in to Google first."); return; }
+  try{
+    const existing = await driveFindBackup();
+    if(!existing){ if(!silent) alert("No cloud backup found yet."); return; }
+    const txt = await driveDownloadFile(existing.id);
+    const remote = JSON.parse(txt);
+    if(!remote.members || !remote.loans || !remote.tx){ throw new Error("Backup is invalid."); }
+    db = remote; save();
+    renderDashboard(); renderMembers(); initMeeting(); renderLoans(); renderRepay(); initReports();
+    if(!silent) alert("Loaded latest backup from Google Drive.");
+    const t = new Date(existing.modifiedTime).toLocaleString('en-UG', { timeZone:'Africa/Kampala' });
+    setCloudStatus(`Loaded: ${t}`, true);
+  }catch(err){
+    console.error(err);
+    if(!silent) alert("Failed to load from Google Drive:\n"+(err.message||err));
+  }
+}
+function wireDrive(){
+  const signIn = document.getElementById('btnGSignIn');
+  const signOut= document.getElementById('btnGSignOut');
+  const saveB  = document.getElementById('btnCloudSave');
+  const loadB  = document.getElementById('btnCloudLoad');
+
+  if(signIn) signIn.onclick = async ()=>{
+    const ok = await driveEnsureToken(true);
+    if(ok){
+      setCloudStatus("Signed in • Ready", true);
+      setCloudButtons(true);
+    }
+  };
+  if(signOut) signOut.onclick = ()=> driveSignOut();
+  if(saveB) saveB.onclick = ()=> driveSave(true);
+  if(loadB) loadB.onclick = ()=> driveLoad(false);
+}
+async function maybeDriveAutoSave(){
+  if(!driveTokenClient) return;
+  const ok = await driveEnsureToken(false);
+  if(ok) await driveSave(false);
+}
+
 /* ========= Initial boot ========= */
-document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
   // Default ledger date range (YTD)
   const y = new Date().getFullYear();
   const from = new Date(y,0,1).toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
@@ -1468,6 +1687,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
   renderLoans();
   renderRepay();
   initReports();
+
+  // Drive
+  await initDrive();
+  wireDrive();
+  // Optional: silently restore from Drive if already granted
+  // await driveLoad(true);
 });
 </script>
 </body>
