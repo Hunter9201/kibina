@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KIBIINA – Savings & Loans (Members 1–30 + Excel)</title>
-<meta name="description" content="Kibiina saving group app: members identified by numbers 1–30, Excel import/export, local backup, loans, meetings, reports.">
+<title>KIBIINA – Savings & Loans (Members 1–30 + Excel + Registrar)</title>
+<meta name="description" content="Kibiina saving group app: members identified by numbers 1–30, Excel import/export, registrar with files, local backup, loans, meetings, reports.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -26,7 +26,7 @@
   .card h3{margin:.3rem 0 .8rem}
   label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
   input,select,button,textarea{font:inherit}
-  input[type="number"],input[type="date"],input[type="text"],select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  input[type="number"],input[type="date"],input[type="text"],input[type="tel"],select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff}
   .btn{padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:700}
   .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
   .btn.primary:hover{background:var(--brand-d);border-color:var(--brand-d)}
@@ -49,7 +49,8 @@
   .hr{height:1px;background:var(--line);margin:12px 0}
   .warnmsg{background:#fff7ed;border:1px solid #fdba74;color:#9a3412;padding:8px;border-radius:10px}
   .goodmsg{background:#ecfdf5;border:1px solid #86efac;color:#065f46;padding:8px;border-radius:10px}
-  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; white-space: pre-wrap;}
+  .mono{font-family: ui-monospace, Menlo, Consolas, "Courier New", monospace; white-space: pre-wrap;}
+  img{max-width:100%}
 </style>
 </head>
 <body>
@@ -59,6 +60,7 @@
       <div class="tabs" id="tabs">
         <button class="tab active" data-tab="dashboard">Dashboard</button>
         <button class="tab" data-tab="members">Members</button>
+        <button class="tab" data-tab="registrar">Registrar</button>
         <button class="tab" data-tab="meeting">Sunday Meeting</button>
         <button class="tab" data-tab="loans">Loans</button>
         <button class="tab" data-tab="repay">Repayments</button>
@@ -149,6 +151,113 @@
           </table>
         </div>
       </div>
+    </section>
+
+    <!-- REGISTRAR -->
+    <section id="registrar" class="tabpanel" hidden>
+      <div class="card">
+        <h3>Member Registrar</h3>
+        <div class="grid-3">
+          <div>
+            <label>Member No (1–30)</label>
+            <select id="regMemberNo"></select>
+          </div>
+          <div>
+            <label>Date of Registration</label>
+            <input type="date" id="regDate">
+          </div>
+          <div>
+            <label>Full Names</label>
+            <input type="text" id="regFullName" placeholder="e.g., Amina N. Kato">
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-top:8px">
+          <div>
+            <label>Phone Number</label>
+            <input type="tel" id="regPhone" placeholder="+2567...">
+          </div>
+          <div>
+            <label>National ID Number</label>
+            <input type="text" id="regNIN" placeholder="CFxxxxxxxxxxx">
+          </div>
+          <div>
+            <label>Nationality</label>
+            <input type="text" id="regNationality" placeholder="Ugandan">
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-top:8px">
+          <div>
+            <label>Area of Residence</label>
+            <input type="text" id="regResidence" placeholder="Village / Parish / Subcounty">
+          </div>
+          <div>
+            <label>Next of Kin – Full Name</label>
+            <input type="text" id="regKinName" placeholder="e.g., John S. Kato">
+          </div>
+          <div>
+            <label>Next of Kin – Relation</label>
+            <input type="text" id="regKinRelation" placeholder="e.g., Brother">
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-top:8px">
+          <div>
+            <label>Next of Kin – Phone</label>
+            <input type="tel" id="regKinPhone" placeholder="+2567...">
+          </div>
+          <div>
+            <label>Next of Kin – Address</label>
+            <input type="text" id="regKinAddress" placeholder="Village / Parish / Subcounty">
+          </div>
+          <div style="align-self:end">
+            <button class="btn primary" id="btnSaveRegistrar">Save Registrar Details</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <div class="card" style="grid-column: span 6;">
+          <h3>Passport Photos (multiple)</h3>
+          <div class="stack">
+            <label class="btn"><input type="file" id="regPassports" accept="image/*" multiple style="display:none">Upload Photos</label>
+          </div>
+          <div id="listPassports" style="margin-top:8px"></div>
+          <p class="help">You can upload multiple passport photos. They are stored locally in this browser.</p>
+        </div>
+
+        <div class="card" style="grid-column: span 6;">
+          <h3>Signed Group By-Laws (PDF/Image)</h3>
+          <div class="stack">
+            <label class="btn"><input type="file" id="regBylaws" accept="application/pdf,image/*" style="display:none">Upload File</label>
+            <button class="btn bad" id="btnRemoveBylaws">Remove</button>
+          </div>
+          <div id="infoBylaws" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <div class="card" style="grid-column: span 6;">
+          <h3>Fully Filled Registration Form (PDF/Image)</h3>
+          <div class="stack">
+            <label class="btn"><input type="file" id="regForm" accept="application/pdf,image/*" style="display:none">Upload File</label>
+            <button class="btn bad" id="btnRemoveForm">Remove</button>
+          </div>
+          <div id="infoForm" style="margin-top:8px"></div>
+        </div>
+
+        <div class="card" style="grid-column: span 6;">
+          <h3>Other Scanned Documents (multiple)</h3>
+          <div class="stack">
+            <label class="btn"><input type="file" id="regOtherDocs" accept="application/pdf,image/*" multiple style="display:none">Upload Files</label>
+          </div>
+          <div id="listOtherDocs" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <p class="help" style="margin-top:8px">
+        Files are stored in your browser (IndexedDB). If you clear the browser data, files will be removed.
+      </p>
     </section>
 
     <!-- MEETING -->
@@ -313,7 +422,7 @@
         <div class="card">
           <h3>Excel Import / Export</h3>
           <div class="stack">
-            <button class="btn" id="btnExportXLSX">Export Excel (XLSX)</button>
+            <button class="btn" id="btnExportXLSX">Export Excel (All Sheets)</button>
             <button class="btn" id="btnExportLedgerXLSX">Export Ledger Template</button>
             <label class="btn"><input type="file" id="importXLSX" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">Import Excel</label>
           </div>
@@ -330,7 +439,7 @@
               <button class="btn" id="btnExportFilledLedger">Export Ledger (Filled)</button>
             </div>
           </div>
-          <p class="help">Uses the <b>official KIBIINA template</b> for all imports & exports. Ledger export can be blank (template) or filled from the selected period. Import is strictly validated.</p>
+          <p class="help">Uses the <b>official KIBIINA template</b> for all imports & exports. Ledger has 30 rows (No. 1–30) and a TOTALS row with SUM formulas.</p>
         </div>
         <div class="card">
           <h3>Self-Test / Diagnostics</h3>
@@ -338,7 +447,7 @@
             <button class="btn" id="btnSelfTest">Run Self-Test</button>
           </div>
           <div id="diagOut" class="mono" style="margin-top:8px"></div>
-          <p class="help">Runs sanity checks for: numbered members 1–30, loans & interest accrual, ledger fill, and Excel template (if online).</p>
+          <p class="help">Checks: numbered members 1–30, loans & interest, ledger fill, Excel template.</p>
         </div>
         <div class="card">
           <h3>Danger Zone</h3>
@@ -348,6 +457,8 @@
       </div>
     </section>
   </main>
+
+<!-- PART 2 (script) goes right below -->
 <script>
 /* ========= Utilities ========= */
 const UGX = (v)=> new Intl.NumberFormat('en-UG', {style:'currency', currency:'UGX', maximumFractionDigits:0}).format(v||0);
@@ -363,7 +474,7 @@ try { db = JSON.parse(localStorage.getItem(KEY) || '{}'); }
 catch(e){ console.warn('Local data corrupted. Resetting storage.', e); localStorage.removeItem(KEY); db = {}; }
 if(!db.members){ // initialize
   db = {
-    members: [], // {id,number,name,joinDate,shares,munno}
+    members: [], // {id,number,name,joinDate,shares,munno, registrar?}
     loans: [],   // {id, memberNo, principalOut, rateMonthly, startDate, lastAccrual, accruedInterest}
     welfareFund: 0,
     tx: [],      // {ts, type, memberNo, amount, meta}
@@ -388,6 +499,7 @@ function wireTabs(){
     document.querySelectorAll('.tabpanel').forEach(p=>p.hidden = p.id !== b.dataset.tab);
     if(b.dataset.tab==='dashboard') renderDashboard();
     if(b.dataset.tab==='members')   renderMembers();
+    if(b.dataset.tab==='registrar') renderRegistrar();
     if(b.dataset.tab==='loans')    { accrueAll(); renderLoans(); }
     if(b.dataset.tab==='repay')    { accrueAll(); renderRepay(); }
     if(b.dataset.tab==='reports')  { accrueAll(); initReports(); }
@@ -1062,6 +1174,274 @@ function wireSelfTest(){
   if(st) st.addEventListener('click', runSelfTest);
 }
 
+/* ========= Registrar: data shape & migration =========
+Each member may have:
+  member.registrar = {
+    regDate, fullName, phone, natId, nationality, residence,
+    nextOfKin: { name, relation, phone, address },
+    passportPhotoIds: [fileId,...],
+    bylawsFileId: string|null,
+    regFormFileId: string|null,
+    otherDocIds: [fileId,...]
+  }
+*/
+function ensureRegistrar(m){
+  if(!m.registrar){
+    m.registrar = {
+      regDate: m.joinDate || todayStr(),
+      fullName: m.name || '',
+      phone: '', natId: '', nationality: 'Ugandan', residence: '',
+      nextOfKin: { name:'', relation:'', phone:'', address:'' },
+      passportPhotoIds: [], bylawsFileId: null, regFormFileId: null, otherDocIds: []
+    };
+  }
+  return m.registrar;
+}
+db.members.forEach(ensureRegistrar);
+
+/* ========= Registrar: IndexedDB (binary file store) ========= */
+const FILEDB_NAME='kibiina_files_v1';
+const FILEDB_STORE='files';
+
+function idbOpen(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(FILEDB_NAME, 1);
+    req.onupgradeneeded = (ev)=>{
+      const dbi = ev.target.result;
+      if(!dbi.objectStoreNames.contains(FILEDB_STORE)){
+        dbi.createObjectStore(FILEDB_STORE, { keyPath:'id' });
+      }
+    };
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error || new Error('Failed to open file DB'));
+  });
+}
+async function filePut(file){
+  const dbi = await idbOpen();
+  const tx = dbi.transaction(FILEDB_STORE,'readwrite');
+  const store = tx.objectStore(FILEDB_STORE);
+  const id = 'f_'+Math.random().toString(36).slice(2,10);
+  const rec = { id, name:file.name, type:file.type||'application/octet-stream', size:file.size||0, ts:Date.now(), data:file };
+  store.put(rec);
+  return new Promise((res,rej)=>{
+    tx.oncomplete = ()=> res(id);
+    tx.onerror = ()=> rej(tx.error || new Error('File save failed'));
+  });
+}
+async function fileGet(id){
+  const dbi = await idbOpen();
+  const tx = dbi.transaction(FILEDB_STORE,'readonly');
+  const store = tx.objectStore(FILEDB_STORE);
+  return new Promise((res,rej)=>{
+    const r = store.get(id);
+    r.onsuccess = ()=> res(r.result||null);
+    r.onerror = ()=> rej(r.error||new Error('File get failed'));
+  });
+}
+async function fileDelete(id){
+  const dbi = await idbOpen();
+  const tx = dbi.transaction(FILEDB_STORE,'readwrite');
+  const store = tx.objectStore(FILEDB_STORE);
+  store.delete(id);
+  return new Promise((res,rej)=>{
+    tx.oncomplete = ()=> res(true);
+    tx.onerror = ()=> rej(tx.error||new Error('File delete failed'));
+  });
+}
+async function fileDownload(id){
+  const rec = await fileGet(id); if(!rec){ alert('File missing'); return; }
+  const url = URL.createObjectURL(rec.data);
+  const a = document.createElement('a');
+  a.href = url; a.download = rec.name || 'download';
+  a.click(); setTimeout(()=> URL.revokeObjectURL(url), 1000);
+}
+
+/* ========= Registrar: render & wire ========= */
+function renderRegistrar(){
+  // populate member list
+  const sel = document.getElementById('regMemberNo');
+  if(!sel) return;
+  sel.innerHTML = [...db.members].sort((a,b)=>Number(a.number)-Number(b.number))
+    .map(m=>`<option value="${m.number}">${m.number} – ${m.name||''}</option>`).join('');
+  if(!sel.value && db.members.length) sel.value = String(db.members[0].number);
+  fillRegistrarForm();
+}
+function selectedMemberRegistrar(){
+  const sel = document.getElementById('regMemberNo'); if(!sel) return null;
+  const m = getMemberByNo(sel.value); if(!m) return null;
+  ensureRegistrar(m);
+  return m;
+}
+function fillRegistrarForm(){
+  const m = selectedMemberRegistrar(); if(!m) return;
+  const r = m.registrar;
+  document.getElementById('regDate').value       = r.regDate || todayStr();
+  document.getElementById('regFullName').value   = r.fullName || '';
+  document.getElementById('regPhone').value      = r.phone || '';
+  document.getElementById('regNIN').value        = r.natId || '';
+  document.getElementById('regNationality').value= r.nationality || '';
+  document.getElementById('regResidence').value  = r.residence || '';
+  document.getElementById('regKinName').value    = r.nextOfKin?.name || '';
+  document.getElementById('regKinRelation').value= r.nextOfKin?.relation || '';
+  document.getElementById('regKinPhone').value   = r.nextOfKin?.phone || '';
+  document.getElementById('regKinAddress').value = r.nextOfKin?.address || '';
+  renderFileList('listPassports', r.passportPhotoIds);
+  renderSingleFileInfo('infoBylaws', r.bylawsFileId);
+  renderSingleFileInfo('infoForm',   r.regFormFileId);
+  renderFileList('listOtherDocs', r.otherDocIds);
+}
+function renderFileList(containerId, ids){
+  const box = document.getElementById(containerId); if(!box) return;
+  if(!ids || !ids.length){ box.innerHTML = '<div class="muted">No files uploaded.</div>'; return; }
+  box.innerHTML = '';
+  ids.forEach(async (fid)=>{
+    const rec = await fileGet(fid); if(!rec) return;
+    const row = document.createElement('div');
+    row.className = 'stack';
+    row.style.margin = '6px 0';
+    let thumb = '';
+    if(rec.type.startsWith('image/')){
+      const url = URL.createObjectURL(rec.data);
+      thumb = `<img src="${url}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">`;
+      setTimeout(()=> URL.revokeObjectURL(url), 5000);
+    }
+    row.innerHTML = `
+      ${thumb}
+      <span class="pill">${rec.name}</span>
+      <button class="btn" data-dl="${fid}">Download</button>
+      <button class="btn bad" data-rm="${fid}">Remove</button>
+    `;
+    row.addEventListener('click', async (e)=>{
+      const dl = e.target.dataset.dl;
+      const rm = e.target.dataset.rm;
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = m.registrar;
+      if(dl){ await fileDownload(dl); }
+      if(rm){
+        await fileDelete(rm);
+        r.passportPhotoIds = (r.passportPhotoIds||[]).filter(x=>x!==rm);
+        r.otherDocIds      = (r.otherDocIds||[]).filter(x=>x!==rm);
+        save(); renderFileList(containerId, containerId==='listPassports'?r.passportPhotoIds:r.otherDocIds);
+      }
+    });
+    box.appendChild(row);
+  });
+}
+function renderSingleFileInfo(containerId, id){
+  const box = document.getElementById(containerId); if(!box) return;
+  if(!id){ box.innerHTML = '<div class="muted">No file uploaded.</div>'; return; }
+  (async()=>{
+    const rec = await fileGet(id);
+    if(!rec){ box.innerHTML = '<div class="muted">File not found.</div>'; return; }
+    box.innerHTML = `
+      <div class="stack">
+        <span class="pill">${rec.name}</span>
+        <button class="btn" id="${containerId}_dl">Download</button>
+      </div>
+    `;
+    const btn = document.getElementById(`${containerId}_dl`);
+    if(btn) btn.onclick = ()=> fileDownload(id);
+  })();
+}
+function wireRegistrar(){
+  const who = document.getElementById('regMemberNo');
+  if(who){ who.addEventListener('change', fillRegistrarForm); }
+
+  const saveBtn = document.getElementById('btnSaveRegistrar');
+  if(saveBtn){
+    saveBtn.onclick = ()=>{
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = ensureRegistrar(m);
+      r.regDate     = document.getElementById('regDate').value || todayStr();
+      r.fullName    = document.getElementById('regFullName').value.trim();
+      r.phone       = document.getElementById('regPhone').value.trim();
+      r.natId       = document.getElementById('regNIN').value.trim();
+      r.nationality = document.getElementById('regNationality').value.trim();
+      r.residence   = document.getElementById('regResidence').value.trim();
+      r.nextOfKin = {
+        name:     document.getElementById('regKinName').value.trim(),
+        relation: document.getElementById('regKinRelation').value.trim(),
+        phone:    document.getElementById('regKinPhone').value.trim(),
+        address:  document.getElementById('regKinAddress').value.trim()
+      };
+      if(!m.name && r.fullName) m.name = r.fullName; // sync display name if empty
+      save(); renderMembers(); alert('Registrar details saved.');
+    };
+  }
+
+  // Passport photos (multiple)
+  const pass = document.getElementById('regPassports');
+  if(pass){
+    pass.addEventListener('change', async (e)=>{
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = ensureRegistrar(m);
+      const files = Array.from(e.target.files||[]);
+      for(const f of files){
+        const id = await filePut(f);
+        r.passportPhotoIds.push(id);
+      }
+      save(); e.target.value=''; renderFileList('listPassports', r.passportPhotoIds);
+    });
+  }
+
+  // By-laws (single)
+  const byl = document.getElementById('regBylaws');
+  if(byl){
+    byl.addEventListener('change', async (e)=>{
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = ensureRegistrar(m);
+      const file = (e.target.files||[])[0]; if(!file) return;
+      if(r.bylawsFileId){ try{ await fileDelete(r.bylawsFileId); }catch{} }
+      r.bylawsFileId = await filePut(file);
+      save(); e.target.value=''; renderSingleFileInfo('infoBylaws', r.bylawsFileId);
+    });
+  }
+  const rmByl = document.getElementById('btnRemoveBylaws');
+  if(rmByl){
+    rmByl.onclick = async ()=>{
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = ensureRegistrar(m);
+      if(r.bylawsFileId){ try{ await fileDelete(r.bylawsFileId);}catch{} r.bylawsFileId = null; save(); renderSingleFileInfo('infoBylaws', null); }
+    };
+  }
+
+  // Registration form (single)
+  const regf = document.getElementById('regForm');
+  if(regf){
+    regf.addEventListener('change', async (e)=>{
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = ensureRegistrar(m);
+      const file = (e.target.files||[])[0]; if(!file) return;
+      if(r.regFormFileId){ try{ await fileDelete(r.regFormFileId); }catch{} }
+      r.regFormFileId = await filePut(file);
+      save(); e.target.value=''; renderSingleFileInfo('infoForm', r.regFormFileId);
+    });
+  }
+  const rmForm = document.getElementById('btnRemoveForm');
+  if(rmForm){
+    rmForm.onclick = async ()=>{
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = ensureRegistrar(m);
+      if(r.regFormFileId){ try{ await fileDelete(r.regFormFileId);}catch{} r.regFormFileId = null; save(); renderSingleFileInfo('infoForm', null); }
+    };
+  }
+
+  // Other documents (multiple)
+  const other = document.getElementById('regOtherDocs');
+  if(other){
+    other.addEventListener('change', async (e)=>{
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = ensureRegistrar(m);
+      const files = Array.from(e.target.files||[]);
+      for(const f of files){
+        const id = await filePut(f);
+        r.otherDocIds.push(id);
+      }
+      save(); e.target.value=''; renderFileList('listOtherDocs', r.otherDocIds);
+    });
+  }
+}
+
 /* ========= Initial boot ========= */
 document.addEventListener('DOMContentLoaded', ()=>{
   // Default ledger date range (YTD)
@@ -1080,6 +1460,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   wireBackup();
   wireExcel();
   wireSelfTest();
+  wireRegistrar();
 
   renderDashboard();
   renderMembers();
@@ -1091,5 +1472,3 @@ document.addEventListener('DOMContentLoaded', ()=>{
 </script>
 </body>
 </html>
-
-<!-- PART 2 (script) goes right below -->
