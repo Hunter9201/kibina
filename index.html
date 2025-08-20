@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KIBIINA – Savings & Loans Management</title>
-<meta name="description" content="Kibiina saving group: members save weekly, buy shares, borrow against shares, track welfare, and generate quarterly reports with profit sharing.">
+<title>KIBIINA – Savings & Loans Management (Registrar Edition)</title>
+<meta name="description" content="Kibiina saving group: members save weekly, buy shares, borrow against shares, track welfare, and generate quarterly reports with profit sharing. Includes full member registrar with documents.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -29,7 +29,7 @@
   .card h3{margin:.3rem 0 .8rem}
   label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
   input,select,button,textarea{font:inherit}
-  input[type="number"],input[type="date"],input[type="text"],select,textarea{
+  input[type="number"],input[type="date"],input[type="text"],input[type="tel"],textarea,select{
     width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff
   }
   .btn{padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:700}
@@ -38,6 +38,7 @@
   .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
   .btn.warn{background:var(--warn);border-color:var(--warn);color:#111827}
   .btn.bad{background:var(--bad);border-color:var(--bad);color:#fff}
+  .btn.ghost{background:#fff;color:var(--ink)}
   .stack{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   .muted{color:var(--muted)}
   .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:#f1f5f9;font-size:12px}
@@ -48,15 +49,31 @@
   .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
   .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
   @media (max-width: 900px){
     .row{grid-template-columns:1fr}
-    .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+    .grid-2,.grid-3,.grid-4,.grid-5{grid-template-columns:1fr}
   }
   .stat{padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}
   .stat b{display:block;font-size:20px;margin-top:4px}
   .hr{height:1px;background:var(--line);margin:12px 0}
   .warnmsg{background:#fff7ed;border:1px solid #fdba74;color:#9a3412;padding:8px;border-radius:10px}
   .goodmsg{background:#ecfdf5;border:1px solid #86efac;color:#065f46;padding:8px;border-radius:10px}
+  .thumbs{display:flex;gap:10px;flex-wrap:wrap}
+  .thumb{width:92px;height:92px;border:1px solid var(--line);border-radius:10px;display:grid;place-items:center;overflow:hidden;background:#f8fafc;position:relative}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .thumb .x{position:absolute;top:4px;right:4px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:2px 6px;font-size:12px;cursor:pointer}
+  .filelist{display:flex;flex-direction:column;gap:6px}
+  .fileitem{display:flex;align-items:center;justify-content:space-between;border:1px dashed var(--line);border-radius:10px;padding:6px 8px}
+  .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;background:#f1f5f9;border:1px solid var(--line);border-radius:8px;padding:2px 6px;font-size:12px}
+  .badge{padding:2px 8px;border-radius:999px;background:#e2f2ff;border:1px solid #cfe7ff;color:#08518c;font-weight:700;font-size:12px}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:20px}
+  .modal .panel{background:#fff;border-radius:12px;max-width:780px;width:100%;padding:16px;border:1px solid var(--line)}
+  @media print{
+    header,.tabs,.btn,.right,.stack{display:none !important}
+    .card{border:none}
+    body{background:#fff}
+  }
 </style>
 </head>
 <body>
@@ -66,6 +83,7 @@
       <div class="tabs" id="tabs">
         <button class="tab active" data-tab="dashboard">Dashboard</button>
         <button class="tab" data-tab="members">Members</button>
+        <button class="tab" data-tab="registrar">Registrar</button>
         <button class="tab" data-tab="meeting">Sunday Meeting</button>
         <button class="tab" data-tab="loans">Loans</button>
         <button class="tab" data-tab="repay">Repayments</button>
@@ -101,20 +119,20 @@
           <div class="stack">
             <button class="btn primary" id="btnCreate30">Create 30 default members</button>
             <button class="btn" id="btnTodaySunday">Set meeting date to next Sunday</button>
-            <button class="btn" id="btnBackup">Export data (JSON)</button>
+            <button class="btn" id="btnBackup">Export data (JSON + files)</button>
             <label class="btn"><input type="file" id="restoreFile" accept="application/json" style="display:none">Import data</label>
           </div>
-          <p class="help">All data saves to this browser using localStorage. Use export/import to move or back up.</p>
+          <p class="help">All data saves to this browser. Export regularly. Backups now include uploaded files.</p>
         </div>
       </div>
     </section>
 
-    <!-- MEMBERS -->
+    <!-- MEMBERS (financial fields) -->
     <section id="members" class="tabpanel" hidden>
       <div class="row">
         <div class="card" style="grid-column: span 4;">
-          <h3>Add / Edit Member</h3>
-          <label>Name</label>
+          <h3>Add / Edit Member (Finance)</h3>
+          <label>Display / Finance Name</label>
           <input id="mName" type="text" placeholder="Member name">
           <div class="grid-3" style="margin-top:8px">
             <div>
@@ -133,17 +151,99 @@
           <div class="stack" style="margin-top:10px">
             <button class="btn primary" id="btnSaveMember">Save Member</button>
             <button class="btn bad" id="btnDeleteMember" disabled>Delete</button>
+            <button class="btn" id="btnOpenRegistrar" disabled>Open in Registrar</button>
           </div>
-          <p class="help">Each share costs UGX 3,000. Max 10 shares per member (affects borrowing limit).</p>
+          <p class="help">Use <b>Registrar</b> tab for full bio data & documents.</p>
         </div>
         <div class="card" style="grid-column: span 8;">
           <h3>Member List</h3>
           <table class="table" id="membersTable">
             <thead>
-              <tr><th>#</th><th>Name</th><th>Shares</th><th>Share Capital</th><th>Munno</th><th>Loan O/S</th><th>Available Limit</th><th></th></tr>
+              <tr><th>#</th><th>Name</th><th>Shares</th><th>Share Capital</th><th>Munno</th><th>Loan O/S</th><th>Available Limit</th><th>Registrar</th><th></th></tr>
             </thead>
             <tbody></tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- REGISTRAR (bio + documents) -->
+    <section id="registrar" class="tabpanel" hidden>
+      <div class="row">
+        <div class="card" style="grid-column: span 5;">
+          <h3>Member Registrar</h3>
+          <div class="grid-2">
+            <div>
+              <label>Date of Registration</label>
+              <input id="rRegDate" type="date">
+            </div>
+            <div>
+              <label>Select Member</label>
+              <select id="rMember"></select>
+            </div>
+          </div>
+          <div class="grid-2" style="margin-top:8px">
+            <div>
+              <label>Full Names</label>
+              <input id="rFullName" type="text" placeholder="Surname Firstname Othernames">
+            </div>
+            <div>
+              <label>Phone Number</label>
+              <input id="rPhone" type="tel" placeholder="07xx xxx xxx">
+            </div>
+          </div>
+          <div class="grid-2" style="margin-top:8px">
+            <div>
+              <label>National ID Number</label>
+              <input id="rNin" type="text" placeholder="CMxxxxxxx...">
+            </div>
+            <div>
+              <label>Nationality</label>
+              <input id="rNationality" type="text" placeholder="Ugandan">
+            </div>
+          </div>
+          <div style="margin-top:8px">
+            <label>Area of Residence</label>
+            <input id="rResidence" type="text" placeholder="Village / Parish / Subcounty / District">
+          </div>
+          <div class="hr"></div>
+          <h3>Next of Kin</h3>
+          <div id="kinBox"></div>
+          <div class="stack" style="margin-top:8px">
+            <button class="btn" id="btnAddKin">Add Next of Kin</button>
+            <span class="help">Include at least one. Name, relationship, phone, address.</span>
+          </div>
+          <div class="hr"></div>
+          <div class="stack">
+            <button class="btn primary" id="btnSaveRegistrar">Save Registrar Details</button>
+            <button class="btn ghost" id="btnPrintProfile">Print Profile</button>
+          </div>
+          <p class="help">All uploads save <b>only</b> in this browser (IndexedDB). Use <span class="kbd">Export data</span> to back up with files.</p>
+        </div>
+
+        <div class="card" style="grid-column: span 7;">
+          <h3>Member Documents</h3>
+          <div class="grid-3">
+            <div>
+              <label>Passport Photos (multiple)</label>
+              <input id="upPhotos" type="file" accept="image/*" multiple>
+              <div id="photosThumbs" class="thumbs" style="margin-top:8px"></div>
+            </div>
+            <div>
+              <label>Signed Group By-Laws (PDF / Image)</label>
+              <input id="upBylaws" type="file" accept="application/pdf,image/*">
+              <div id="bylawsList" class="filelist" style="margin-top:8px"></div>
+            </div>
+            <div>
+              <label>Registration Form (PDF / Image)</label>
+              <input id="upRegForm" type="file" accept="application/pdf,image/*">
+              <div id="regformList" class="filelist" style="margin-top:8px"></div>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <h3>Supporting Documents (scans of all above)</h3>
+          <input id="upDocs" type="file" multiple>
+          <div id="docsList" class="filelist" style="margin-top:8px"></div>
         </div>
       </div>
     </section>
@@ -302,19 +402,23 @@
         <div class="card">
           <h3>Backup / Restore</h3>
           <div class="stack">
-            <button class="btn primary" id="btnBackup2">Export JSON</button>
+            <button class="btn primary" id="btnBackup2">Export JSON + files</button>
             <label class="btn"><input type="file" id="restoreFile2" accept="application/json" style="display:none">Import JSON</label>
+            <button class="btn" id="btnBackupLight">Export (no files)</button>
           </div>
-          <p class="help">Exports all members, loans, transactions, and settings.</p>
+          <p class="help">Full export packs all uploaded files as base64 into one JSON file. May be large.</p>
         </div>
         <div class="card">
           <h3>Danger Zone</h3>
           <button class="btn bad" id="btnWipe">Reset ALL data</button>
-          <p class="help">This cannot be undone (unless you exported a backup).</p>
+          <p class="help">This deletes members, loans, transactions, settings and uploaded documents.</p>
         </div>
       </div>
     </section>
   </main>
+
+  <!-- Simple modal for previews -->
+  <div id="modal" class="modal"><div class="panel"><div class="stack right"><button class="btn" id="modalClose">Close</button></div><div id="modalBody"></div></div></div>
 
 <script>
 /* ========= Utilities ========= */
@@ -323,13 +427,82 @@ const todayStr = ()=> new Date().toISOString().slice(0,10);
 const parseDate = s => new Date(s+'T00:00:00');
 const daysBetween = (a,b)=> Math.max(0, Math.round((parseDate(b)-parseDate(a)) / (1000*60*60*24)));
 const clone = x => JSON.parse(JSON.stringify(x));
+const byId = id => document.getElementById(id);
+
+/* ========= IndexedDB for file storage ========= */
+let idb;
+function idbOpen(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open('kibiina_assets_v1',1);
+    req.onupgradeneeded = ()=>{
+      const dbx = req.result;
+      if(!dbx.objectStoreNames.contains('assets')){
+        const store = dbx.createObjectStore('assets', {keyPath:'id'});
+        store.createIndex('by_created','created');
+      }
+    };
+    req.onsuccess = ()=>{ idb = req.result; resolve(idb); };
+    req.onerror = ()=> reject(req.error);
+  });
+}
+function assetId(){ return 'A'+Math.random().toString(36).slice(2,9); }
+function saveAsset(file){
+  return new Promise((resolve, reject)=>{
+    const id = assetId();
+    const tx = idb.transaction('assets','readwrite');
+    const rec = {id, name:file.name, type:file.type||'application/octet-stream', size:file.size, created:Date.now(), blob:file};
+    tx.objectStore('assets').put(rec);
+    tx.oncomplete = ()=> resolve(id);
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
+function readAsset(id){
+  return new Promise((resolve, reject)=>{
+    const tx = idb.transaction('assets','readonly');
+    const req = tx.objectStore('assets').get(id);
+    req.onsuccess = ()=> resolve(req.result||null);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+function deleteAsset(id){
+  return new Promise((resolve, reject)=>{
+    const tx = idb.transaction('assets','readwrite');
+    tx.objectStore('assets').delete(id);
+    tx.oncomplete = ()=> resolve();
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
+async function assetUrl(id){
+  const rec = await readAsset(id); if(!rec) return null;
+  return URL.createObjectURL(rec.blob);
+}
+async function assetDataURL(id){
+  const rec = await readAsset(id); if(!rec) return null;
+  return new Promise((resolve)=>{
+    const fr = new FileReader();
+    fr.onload = ()=> resolve(fr.result);
+    fr.readAsDataURL(rec.blob);
+  });
+}
+function listAllAssets(){
+  return new Promise((resolve,reject)=>{
+    const tx = idb.transaction('assets','readonly');
+    const store = tx.objectStore('assets');
+    const out = [];
+    store.openCursor().onsuccess = e=>{
+      const cur = e.target.result;
+      if(cur){ out.push(cur.value); cur.continue(); } else resolve(out);
+    };
+    tx.onerror = ()=> reject(tx.error);
+  });
+}
 
 /* ========= Data Model (localStorage) ========= */
-const KEY='kibiina_v1';
+const KEY='kibiina_v2';
 let db = JSON.parse(localStorage.getItem(KEY) || '{}');
 if(!db.members){ // initialize
   db = {
-    members: [], // {id,name,joinDate,shares,munno,loanId?}
+    members: [], // {id,name,joinDate,shares,munno,loanId?, registrar?}
     loans: [],   // {id, memberId, principalOut, rateMonthly, startDate, lastAccrual, accruedInterest}
     welfareFund: 0,
     tx: [],      // {ts, type, memberId?, amount, meta}
@@ -340,12 +513,13 @@ if(!db.members){ // initialize
 function save(){ localStorage.setItem(KEY, JSON.stringify(db)); }
 
 /* ========= Tabs ========= */
-document.getElementById('tabs').addEventListener('click', e=>{
+byId('tabs').addEventListener('click', e=>{
   const b = e.target.closest('.tab'); if(!b) return;
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x===b));
   document.querySelectorAll('.tabpanel').forEach(p=>p.hidden = p.id !== b.dataset.tab);
   if(b.dataset.tab==='dashboard') renderDashboard();
   if(b.dataset.tab==='members') renderMembers();
+  if(b.dataset.tab==='registrar') { renderRegistrarSelect(); renderRegistrarPanel(); renderDocPanels(); }
   if(b.dataset.tab==='loans')    { accrueAll(); renderLoans(); }
   if(b.dataset.tab==='repay')    { accrueAll(); renderRepay(); }
   if(b.dataset.tab==='reports')  { accrueAll(); initReports(); }
@@ -361,17 +535,28 @@ function renderDashboard(){
   const intYTD = db.tx.filter(t => t.type==='repay_interest' && new Date(t.ts).getFullYear()===year)
                       .reduce((s,t)=> s + t.amount, 0);
   const munnoAgg = db.members.reduce((s,m)=> s + (m.munno||0), 0);
-  document.getElementById('statMembers').textContent = String(n);
-  document.getElementById('statShareCap').textContent = UGX(shareCap);
-  document.getElementById('statLoans').textContent = UGX(loansOut);
-  document.getElementById('statInterestYTD').textContent = UGX(intYTD);
-  document.getElementById('fundWelfare').textContent = UGX(db.welfareFund||0);
-  document.getElementById('fundMunno').textContent = UGX(munnoAgg);
+  byId('statMembers').textContent = String(n);
+  byId('statShareCap').textContent = UGX(shareCap);
+  byId('statLoans').textContent = UGX(loansOut);
+  byId('statInterestYTD').textContent = UGX(intYTD);
+  byId('fundWelfare').textContent = UGX(db.welfareFund||0);
+  byId('fundMunno').textContent = UGX(munnoAgg);
 }
 renderDashboard();
 
-/* ========= Members ========= */
+/* ========= Members (finance) ========= */
 let editingId = null;
+function registrarCompleteness(m){
+  const r = m.registrar||{};
+  const photos = (r.passportPhotos||[]).length>0;
+  const bylaws = !!r.bylawsAssetId;
+  const regform = !!r.regFormAssetId;
+  const base = r.fullName && r.regDate && r.phone && r.nin && r.nationality && r.residence;
+  const kinOk = Array.isArray(r.nextOfKin) && r.nextOfKin.length>0 && r.nextOfKin.every(k=>k.name && k.phone && k.relation);
+  const docs = Array.isArray(r.supportingDocs) && r.supportingDocs.length>0;
+  const score = [photos,bylaws,regform,base,kinOk,docs].filter(Boolean).length; // 0..6
+  return {score, total:6};
+}
 function renderMembers(){
   const tbody = document.querySelector('#membersTable tbody');
   tbody.innerHTML = '';
@@ -380,6 +565,7 @@ function renderMembers(){
     const loan = db.loans.find(l=>l.memberId===m.id);
     const principalOut = loan? loan.principalOut : 0;
     const limit = Math.max(0, (shareCap*2) - principalOut);
+    const rc = registrarCompleteness(m);
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${idx+1}</td>
       <td>${m.name}</td>
@@ -388,33 +574,53 @@ function renderMembers(){
       <td>${UGX(m.munno||0)}</td>
       <td>${UGX(principalOut)}</td>
       <td>${UGX(limit)}</td>
-      <td><button class="btn" data-edit="${m.id}">Edit</button></td>`;
+      <td><span class="badge">${rc.score}/${rc.total}</span></td>
+      <td><button class="btn" data-edit="${m.id}">Edit</button> <button class="btn" data-openreg="${m.id}">Registrar</button></td>`;
     tbody.appendChild(tr);
   });
 }
 function resetMemberForm(){
   editingId=null;
-  document.getElementById('mName').value='';
-  document.getElementById('mShares').value=0;
-  document.getElementById('mMunno').value=0;
-  document.getElementById('mJoin').value=todayStr();
-  document.getElementById('btnDeleteMember').disabled = true;
+  byId('mName').value='';
+  byId('mShares').value=0;
+  byId('mMunno').value=0;
+  byId('mJoin').value=todayStr();
+  byId('btnDeleteMember').disabled = true;
+  byId('btnOpenRegistrar').disabled = true;
 }
-document.getElementById('membersTable').addEventListener('click', e=>{
-  const id = e.target.dataset.edit; if(!id) return;
-  const m = db.members.find(x=>x.id===id);
-  editingId = id;
-  document.getElementById('mName').value   = m.name||'';
-  document.getElementById('mShares').value = m.shares||0;
-  document.getElementById('mMunno').value  = m.munno||0;
-  document.getElementById('mJoin').value   = m.joinDate||todayStr();
-  document.getElementById('btnDeleteMember').disabled = false;
+byId('membersTable').addEventListener('click', e=>{
+  const id = e.target.dataset.edit; 
+  const openReg = e.target.dataset.openreg;
+  if(id){
+    const m = db.members.find(x=>x.id===id);
+    editingId = id;
+    byId('mName').value   = m.name||'';
+    byId('mShares').value = m.shares||0;
+    byId('mMunno').value  = m.munno||0;
+    byId('mJoin').value   = m.joinDate||todayStr();
+    byId('btnDeleteMember').disabled = false;
+    byId('btnOpenRegistrar').disabled = false;
+  }
+  if(openReg){
+    // switch to registrar and preselect member
+    document.querySelector('.tab[data-tab="registrar"]').click();
+    byId('rMember').value = openReg;
+    renderRegistrarPanel();
+    renderDocPanels();
+  }
 });
-document.getElementById('btnSaveMember').onclick = ()=>{
-  const name = document.getElementById('mName').value.trim();
-  const shares = Math.min(10, Math.max(0, parseInt(document.getElementById('mShares').value||0)));
-  const munno = Math.max(0, parseInt(document.getElementById('mMunno').value||0));
-  const join = document.getElementById('mJoin').value || todayStr();
+byId('btnOpenRegistrar').onclick = ()=>{
+  if(!editingId) return;
+  document.querySelector('.tab[data-tab="registrar"]').click();
+  byId('rMember').value = editingId;
+  renderRegistrarPanel();
+  renderDocPanels();
+};
+byId('btnSaveMember').onclick = ()=>{
+  const name = byId('mName').value.trim();
+  const shares = Math.min(10, Math.max(0, parseInt(byId('mShares').value||0)));
+  const munno = Math.max(0, parseInt(byId('mMunno').value||0));
+  const join = byId('mJoin').value || todayStr();
   if(!name){ alert('Enter member name'); return; }
   if(editingId){
     const m = db.members.find(x=>x.id===editingId);
@@ -425,22 +631,270 @@ document.getElementById('btnSaveMember').onclick = ()=>{
   }
   save(); renderMembers(); renderDashboard(); resetMemberForm();
 };
-document.getElementById('btnDeleteMember').onclick = ()=>{
+byId('btnDeleteMember').onclick = ()=>{
   if(!editingId) return;
-  if(!confirm('Delete this member?')) return;
-  // also remove loan if any
+  if(!confirm('Delete this member (and their loans & documents)?')) return;
+  // remove loans
   db.loans = db.loans.filter(l=>l.memberId!==editingId);
+  // remove assets for this member from IDB
+  const m = db.members.find(x=>x.id===editingId);
+  if(m && m.registrar){
+    const r = m.registrar;
+    const toDel = [];
+    if(r.passportPhotos) toDel.push(...r.passportPhotos);
+    if(r.bylawsAssetId) toDel.push(r.bylawsAssetId);
+    if(r.regFormAssetId) toDel.push(r.regFormAssetId);
+    if(r.supportingDocs) toDel.push(...r.supportingDocs);
+    Promise.all(toDel.map(id=>deleteAsset(id))).catch(()=>{});
+  }
   db.members = db.members.filter(m=>m.id!==editingId);
   save(); renderMembers(); renderDashboard(); resetMemberForm();
 };
-document.getElementById('btnCreate30').onclick = ()=>{
+byId('btnCreate30').onclick = ()=>{
   if(db.members.length && !confirm('Add 30 demo members to existing list?')) return;
   for(let i=1;i<=30;i++){
     const id='m'+Math.random().toString(36).slice(2,9);
-    db.members.push({id,name:`Member ${i}`,shares:0,munno:0,joinDate:todayStr()});
+    db.members.push({id,name:`Member ${i}`,shares:0,munno:0,joinDate:todayStr(), registrar:{ fullName:`Member ${i}`, regDate:todayStr(), nextOfKin:[]} });
   }
-  save(); renderMembers(); renderDashboard();
+  save(); renderMembers(); renderDashboard(); renderRegistrarSelect();
 };
+
+/* ========= Registrar ========= */
+function renderRegistrarSelect(){
+  const sel = byId('rMember');
+  sel.innerHTML = db.members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+  if(!sel.value && db.members[0]) sel.value = db.members[0].id;
+}
+function kinRow(k, idx){
+  return `<div class="grid-2" style="gap:8px;align-items:end;margin-bottom:8px">
+    <div>
+      <label>Kin ${idx+1} – Name</label>
+      <input type="text" data-kname value="${k.name||''}">
+    </div>
+    <div>
+      <label>Relationship</label>
+      <input type="text" data-krel value="${k.relation||''}">
+    </div>
+    <div>
+      <label>Phone</label>
+      <input type="tel" data-kphone value="${k.phone||''}">
+    </div>
+    <div>
+      <label>Address</label>
+      <input type="text" data-kaddr value="${k.address||''}">
+    </div>
+    <div class="right"><button class="btn bad" data-kdel>Remove</button></div>
+  </div>`;
+}
+function renderRegistrarPanel(){
+  const mid = byId('rMember').value; if(!mid) return;
+  const m = db.members.find(x=>x.id===mid);
+  const r = m.registrar || {};
+  byId('rRegDate').value = r.regDate || todayStr();
+  byId('rFullName').value = r.fullName || m.name || '';
+  byId('rPhone').value = r.phone || '';
+  byId('rNin').value = r.nin || '';
+  byId('rNationality').value = r.nationality || 'Ugandan';
+  byId('rResidence').value = r.residence || '';
+  const kin = Array.isArray(r.nextOfKin)? r.nextOfKin : [];
+  const box = byId('kinBox');
+  box.innerHTML = kin.map((k,i)=> kinRow(k,i)).join('') || kinRow({},0);
+}
+byId('rMember').addEventListener('change', ()=>{ renderRegistrarPanel(); renderDocPanels(); });
+byId('btnAddKin').onclick = ()=>{
+  const box = byId('kinBox');
+  box.insertAdjacentHTML('beforeend', kinRow({}, box.querySelectorAll('[data-kname]').length));
+};
+byId('kinBox').addEventListener('click', e=>{
+  if(e.target && e.target.hasAttribute('data-kdel')){
+    const row = e.target.closest('div');
+    row.parentElement.remove();
+  }
+});
+byId('btnSaveRegistrar').onclick = ()=>{
+  const mid = byId('rMember').value; if(!mid) return;
+  const m = db.members.find(x=>x.id===mid);
+  const kinEls = Array.from(byId('kinBox').querySelectorAll('[data-kname]')).map((_,i)=>{
+    return {
+      name: byId('kinBox').querySelectorAll('[data-kname]')[i].value.trim(),
+      relation: byId('kinBox').querySelectorAll('[data-krel]')[i].value.trim(),
+      phone: byId('kinBox').querySelectorAll('[data-kphone]')[i].value.trim(),
+      address: byId('kinBox').querySelectorAll('[data-kaddr]')[i].value.trim(),
+    };
+  }).filter(k=>k.name||k.phone||k.relation||k.address);
+  const r = m.registrar || {};
+  m.registrar = {
+    ...r,
+    regDate: byId('rRegDate').value || todayStr(),
+    fullName: byId('rFullName').value.trim(),
+    phone: byId('rPhone').value.trim(),
+    nin: byId('rNin').value.trim(),
+    nationality: byId('rNationality').value.trim(),
+    residence: byId('rResidence').value.trim(),
+    nextOfKin: kinEls
+  };
+  // keep finance name in sync if blank
+  if(!m.name && m.registrar.fullName) m.name = m.registrar.fullName;
+  save(); renderMembers(); alert('Registrar details saved.');
+};
+byId('btnPrintProfile').onclick = async ()=>{
+  const mid = byId('rMember').value; if(!mid) return;
+  const m = db.members.find(x=>x.id===mid);
+  const r = m.registrar||{};
+  const rc = registrarCompleteness(m);
+  const modal = byId('modal');
+  const body = byId('modalBody');
+  const photos = (r.passportPhotos||[]);
+  let photosHtml = '';
+  for(const pid of photos){
+    const url = await assetUrl(pid); if(url) photosHtml += `<img src="${url}" style="width:90px;height:90px;object-fit:cover;border:1px solid var(--line);border-radius:8px;margin:4px">`;
+  }
+  body.innerHTML = `
+    <h3>Member Profile</h3>
+    <div class="grid-3">
+      <div class="stat"><span class="muted">Name</span><b>${r.fullName||m.name||''}</b></div>
+      <div class="stat"><span class="muted">Phone</span><b>${r.phone||''}</b></div>
+      <div class="stat"><span class="muted">NIN</span><b>${r.nin||''}</b></div>
+    </div>
+    <div class="grid-3" style="margin-top:8px">
+      <div class="stat"><span class="muted">Reg Date</span><b>${r.regDate||''}</b></div>
+      <div class="stat"><span class="muted">Nationality</span><b>${r.nationality||''}</b></div>
+      <div class="stat"><span class="muted">Residence</span><b>${r.residence||''}</b></div>
+    </div>
+    <p style="margin-top:8px"><span class="badge">Registrar completeness ${rc.score}/${rc.total}</span></p>
+    <div class="hr"></div>
+    <h4>Passport Photos</h4>
+    <div>${photosHtml||'<span class="muted">No photos</span>'}</div>
+    <div class="hr"></div>
+    <h4>Next of Kin</h4>
+    ${(r.nextOfKin||[]).map(k=>`<div>- ${k.name||''} (${k.relation||''}) – ${k.phone||''} – ${k.address||''}</div>`).join('') || '<span class="muted">None</span>'}
+  `;
+  modal.style.display='flex';
+};
+byId('modalClose').onclick = ()=>{ byId('modal').style.display='none'; byId('modalBody').innerHTML=''; };
+byId('modal').addEventListener('click', e=>{ if(e.target.id==='modal') byId('modalClose').click(); });
+
+/* ========= Registrar: Documents ========= */
+function docItemHtml(id, name, size){
+  return `<div class="fileitem"><div><b>${name}</b> <span class="muted">(${Math.round(size/1024)} KB)</span></div>
+    <div class="stack"><button class="btn" data-view="${id}">View</button><button class="btn bad" data-del="${id}">Remove</button></div></div>`;
+}
+async function renderDocPanels(){
+  const mid = byId('rMember').value; if(!mid) return;
+  const m = db.members.find(x=>x.id===mid);
+  const r = m.registrar || {};
+  // Photos
+  const photosBox = byId('photosThumbs');
+  photosBox.innerHTML='';
+  if(r.passportPhotos && r.passportPhotos.length){
+    for(const pid of r.passportPhotos){
+      const rec = await readAsset(pid); if(!rec) continue;
+      const url = URL.createObjectURL(rec.blob);
+      const div = document.createElement('div');
+      div.className='thumb';
+      div.innerHTML = `<img src="${url}"><button class="x" data-delp="${pid}">×</button>`;
+      photosBox.appendChild(div);
+    }
+  }
+  // Bylaws
+  const bylaws = byId('bylawsList'); bylaws.innerHTML='';
+  if(r.bylawsAssetId){
+    const rec = await readAsset(r.bylawsAssetId); if(rec){ bylaws.innerHTML = docItemHtml(r.bylawsAssetId, rec.name, rec.size); }
+  }
+  // Reg form
+  const regf = byId('regformList'); regf.innerHTML='';
+  if(r.regFormAssetId){
+    const rec = await readAsset(r.regFormAssetId); if(rec){ regf.innerHTML = docItemHtml(r.regFormAssetId, rec.name, rec.size); }
+  }
+  // Supporting docs
+  const docs = byId('docsList'); docs.innerHTML='';
+  if(r.supportingDocs && r.supportingDocs.length){
+    for(const did of r.supportingDocs){
+      const rec = await readAsset(did); if(!rec) continue;
+      docs.insertAdjacentHTML('beforeend', docItemHtml(did, rec.name, rec.size));
+    }
+  }
+}
+
+// Upload handlers
+byId('upPhotos').addEventListener('change', async (e)=>{
+  const mid = byId('rMember').value; if(!mid) return;
+  const m = db.members.find(x=>x.id===mid);
+  m.registrar = m.registrar || {};
+  m.registrar.passportPhotos = m.registrar.passportPhotos || [];
+  const files = Array.from(e.target.files||[]);
+  for(const f of files){
+    if(!f.type.startsWith('image/')) continue;
+    const id = await saveAsset(f);
+    m.registrar.passportPhotos.push(id);
+  }
+  save(); e.target.value=''; renderDocPanels(); renderMembers();
+});
+byId('photosThumbs').addEventListener('click', async (e)=>{
+  const id = e.target.dataset.delp || (e.target.closest('button')&&e.target.closest('button').dataset.delp);
+  if(!id) return;
+  if(!confirm('Remove this photo?')) return;
+  const mid = byId('rMember').value; const m = db.members.find(x=>x.id===mid);
+  m.registrar.passportPhotos = (m.registrar.passportPhotos||[]).filter(x=>x!==id);
+  await deleteAsset(id).catch(()=>{});
+  save(); renderDocPanels(); renderMembers();
+});
+byId('upBylaws').addEventListener('change', async (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  const id = await saveAsset(f);
+  const m = db.members.find(x=>x.id===byId('rMember').value);
+  m.registrar = m.registrar || {};
+  if(m.registrar.bylawsAssetId) await deleteAsset(m.registrar.bylawsAssetId).catch(()=>{});
+  m.registrar.bylawsAssetId = id; save(); e.target.value=''; renderDocPanels(); renderMembers();
+});
+byId('upRegForm').addEventListener('change', async (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  const id = await saveAsset(f);
+  const m = db.members.find(x=>x.id===byId('rMember').value);
+  m.registrar = m.registrar || {};
+  if(m.registrar.regFormAssetId) await deleteAsset(m.registrar.regFormAssetId).catch(()=>{});
+  m.registrar.regFormAssetId = id; save(); e.target.value=''; renderDocPanels(); renderMembers();
+});
+byId('upDocs').addEventListener('change', async (e)=>{
+  const files = Array.from(e.target.files||[]); if(!files.length) return;
+  const m = db.members.find(x=>x.id===byId('rMember').value);
+  m.registrar = m.registrar || {};
+  m.registrar.supportingDocs = m.registrar.supportingDocs || [];
+  for(const f of files){ const id = await saveAsset(f); m.registrar.supportingDocs.push(id); }
+  save(); e.target.value=''; renderDocPanels(); renderMembers();
+});
+
+// View/remove in lists
+for(const listId of ['bylawsList','regformList','docsList']){
+  byId(listId).addEventListener('click', async (e)=>{
+    const viewId = e.target.dataset.view;
+    const delId = e.target.dataset.del;
+    if(viewId){
+      const rec = await readAsset(viewId); if(!rec) return;
+      const url = URL.createObjectURL(rec.blob);
+      const body = byId('modalBody');
+      body.innerHTML = '';
+      if(rec.type.startsWith('image/')){
+        body.innerHTML = `<img src="${url}" style="max-width:100%;max-height:72vh;border:1px solid var(--line);border-radius:10px">`;
+      }else if(rec.type==='application/pdf'){
+        body.innerHTML = `<iframe src="${url}" style="width:100%;height:75vh;border:1px solid var(--line);border-radius:10px"></iframe>`;
+      }else{
+        body.innerHTML = `<a class="btn primary" href="${url}" download="${rec.name}">Download ${rec.name}</a>`;
+      }
+      byId('modal').style.display='flex';
+    }
+    if(delId){
+      if(!confirm('Remove this file?')) return;
+      const m = db.members.find(x=>x.id===byId('rMember').value);
+      const r = m.registrar||{};
+      if(r.bylawsAssetId===delId) r.bylawsAssetId = null;
+      if(r.regFormAssetId===delId) r.regFormAssetId = null;
+      if(Array.isArray(r.supportingDocs)) r.supportingDocs = r.supportingDocs.filter(x=>x!==delId);
+      await deleteAsset(delId).catch(()=>{});
+      save(); renderDocPanels(); renderMembers();
+    }
+  });
+}
 
 /* ========= Meeting (Sunday) ========= */
 function nextSundayStr(){
@@ -449,20 +903,18 @@ function nextSundayStr(){
   d.setDate(d.getDate() + diff);
   return d.toISOString().slice(0,10);
 }
-document.getElementById('btnTodaySunday').onclick = ()=>{
-  document.getElementById('meetDate').value = nextSundayStr();
-};
+byId('btnTodaySunday').onclick = ()=>{ byId('meetDate').value = nextSundayStr(); };
 function initMeeting(){
-  document.getElementById('meetDate').value = db.settings.lastMeetingDate || nextSundayStr();
-  document.getElementById('welfarePer').value = 1500;
-  document.getElementById('meetingSheet').innerHTML='';
-  document.getElementById('btnPostMeeting').disabled = true;
+  byId('meetDate').value = db.settings.lastMeetingDate || nextSundayStr();
+  byId('welfarePer').value = 1500;
+  byId('meetingSheet').innerHTML='';
+  byId('btnPostMeeting').disabled = true;
 }
-document.getElementById('btnStartMeeting').onclick = ()=>{
-  const date = document.getElementById('meetDate').value || todayStr();
+byId('btnStartMeeting').onclick = ()=>{
+  const date = byId('meetDate').value || todayStr();
   db.settings.lastMeetingDate = date; save();
-  const per = parseInt(document.getElementById('welfarePer').value||1500);
-  const box = document.getElementById('meetingSheet');
+  const per = parseInt(byId('welfarePer').value||1500);
+  const box = byId('meetingSheet');
   if(db.members.length===0){ box.innerHTML='<div class="warnmsg">No members yet. Add members first.</div>'; return; }
   let html = `<table class="table"><thead><tr>
       <th>#</th><th>Name</th><th>Munno Deposit</th><th>Welfare (UGX ${per})</th><th>Buy Shares</th></tr></thead><tbody>`;
@@ -477,39 +929,25 @@ document.getElementById('btnStartMeeting').onclick = ()=>{
   });
   html += '</tbody></table>';
   box.innerHTML = html;
-  document.getElementById('btnPostMeeting').disabled = false;
+  byId('btnPostMeeting').disabled = false;
 };
-document.getElementById('btnPostMeeting').onclick = ()=>{
-  const date = document.getElementById('meetDate').value || todayStr();
-  const per = parseInt(document.getElementById('welfarePer').value||1500);
+byId('btnPostMeeting').onclick = ()=>{
+  const date = byId('meetDate').value || todayStr();
+  const per = parseInt(byId('welfarePer').value||1500);
   accrueAll(date); // up to meeting date
   db.members.forEach(m=>{
-    const munno = parseInt(document.getElementById(`in_munno_${m.id}`).value||0);
-    const wel = document.getElementById(`in_wel_${m.id}`).checked;
-    const sharesBuy = Math.min(10-(m.shares||0), Math.max(0, parseInt(document.getElementById(`in_share_${m.id}`).value||0)));
-    if(munno>0){
-      m.munno = (m.munno||0) + munno;
-      db.tx.push({ts:date, type:'munno_deposit', memberId:m.id, amount:munno});
-    }
-    if(wel){
-      db.welfareFund = (db.welfareFund||0) + per;
-      db.tx.push({ts:date, type:'welfare', memberId:m.id, amount:per});
-    }
-    if(sharesBuy>0){
-      m.shares = (m.shares||0) + sharesBuy;
-      db.tx.push({ts:date, type:'share_buy', memberId:m.id, amount: sharesBuy*3000, meta:{shares:sharesBuy}});
-    }
+    const munno = parseInt(byId(`in_munno_${m.id}`).value||0);
+    const wel = byId(`in_wel_${m.id}`).checked;
+    const sharesBuy = Math.min(10-(m.shares||0), Math.max(0, parseInt(byId(`in_share_${m.id}`).value||0)));
+    if(munno>0){ m.munno = (m.munno||0) + munno; db.tx.push({ts:date, type:'munno_deposit', memberId:m.id, amount:munno}); }
+    if(wel){ db.welfareFund = (db.welfareFund||0) + per; db.tx.push({ts:date, type:'welfare', memberId:m.id, amount:per}); }
+    if(sharesBuy>0){ m.shares = (m.shares||0) + sharesBuy; db.tx.push({ts:date, type:'share_buy', memberId:m.id, amount: sharesBuy*3000, meta:{shares:sharesBuy}}); }
   });
   save(); initMeeting(); renderDashboard(); alert('Meeting posted.');
 };
 
 /* ========= Loans ========= */
-function loanRateFor(amount){
-  if(amount>=1 && amount<=3999000) return 0.025;
-  if(amount>3999000) return 0.02;
-  return 0;
-}
-// Accrue interest on all loans up to a date (default today)
+function loanRateFor(amount){ if(amount>=1 && amount<=3999000) return 0.025; if(amount>3999000) return 0.02; return 0; }
 function accrueAll(upToDate){
   const dTo = upToDate || todayStr();
   db.loans.forEach(l=>{
@@ -525,13 +963,11 @@ function accrueAll(upToDate){
   save();
 }
 function renderLoans(){
-  // member dropdown
-  const sel = document.getElementById('loanMember');
+  const sel = byId('loanMember');
   sel.innerHTML = db.members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
-  document.getElementById('loanAmt').value='';
-  document.getElementById('loanDate').value = todayStr();
-  document.getElementById('loanHint').textContent='';
-  // table
+  byId('loanAmt').value='';
+  byId('loanDate').value = todayStr();
+  byId('loanHint').textContent='';
   const tbody = document.querySelector('#loansTable tbody');
   tbody.innerHTML='';
   db.loans.forEach(l=>{
@@ -545,54 +981,43 @@ function renderLoans(){
     tbody.appendChild(tr);
   });
 }
-document.getElementById('loanAmt').addEventListener('input', ()=>{
-  const mid = document.getElementById('loanMember').value;
+byId('loanAmt').addEventListener('input', ()=>{
+  const mid = byId('loanMember').value;
   const m = db.members.find(x=>x.id===mid); if(!m) return;
-  const amount = parseInt(document.getElementById('loanAmt').value||0);
+  const amount = parseInt(byId('loanAmt').value||0);
   const shareCap = (m.shares||0)*3000;
   const currentLoan = db.loans.find(l=>l.memberId===mid);
   const principalOut = currentLoan? currentLoan.principalOut : 0;
   const limit = Math.max(0, shareCap*2 - principalOut);
   const rate = loanRateFor(amount);
-  document.getElementById('loanHint').innerHTML =
-    `Share capital: <b>${UGX(shareCap)}</b> → Limit: <b>${UGX(limit)}</b> • Proposed rate: <b>${(rate*100)||0}%/mo</b>`;
+  byId('loanHint').innerHTML = `Share capital: <b>${UGX(shareCap)}</b> → Limit: <b>${UGX(limit)}</b> • Proposed rate: <b>${(rate*100)||0}%/mo</b>`;
 });
-document.getElementById('btnIssueLoan').onclick = ()=>{
-  const memberId = document.getElementById('loanMember').value;
+byId('btnIssueLoan').onclick = ()=>{
+  const memberId = byId('loanMember').value;
   const m = db.members.find(x=>x.id===memberId);
   if(!m){ alert('Select member'); return; }
-  const amount = parseInt(document.getElementById('loanAmt').value||0);
-  const date = document.getElementById('loanDate').value || todayStr();
+  const amount = parseInt(byId('loanAmt').value||0);
+  const date = byId('loanDate').value || todayStr();
   if(amount<=0){ alert('Enter amount'); return; }
-  // check limit
   const current = db.loans.find(l=>l.memberId===memberId);
   const principalOut = current? current.principalOut : 0;
   const limit = Math.max(0, ((m.shares||0)*3000)*2 - principalOut);
   if(amount>limit){ alert('Amount exceeds limit.'); return; }
   const rate = loanRateFor(amount);
   accrueAll(date);
-  if(current){
-    current.principalOut += amount;
-    db.tx.push({ts:date, type:'loan_topup', memberId, amount});
-  }else{
-    db.loans.push({
-      id: 'L'+Math.random().toString(36).slice(2,9),
-      memberId, principalOut:amount, rateMonthly:rate, startDate:date, lastAccrual:date, accruedInterest:0
-    });
-    db.tx.push({ts:date, type:'loan_issue', memberId, amount});
-  }
+  if(current){ current.principalOut += amount; db.tx.push({ts:date, type:'loan_topup', memberId, amount}); }
+  else{ db.loans.push({ id: 'L'+Math.random().toString(36).slice(2,9), memberId, principalOut:amount, rateMonthly:rate, startDate:date, lastAccrual:date, accruedInterest:0 }); db.tx.push({ts:date, type:'loan_issue', memberId, amount}); }
   save(); renderLoans(); renderDashboard(); alert('Loan recorded.');
 };
 
 /* ========= Repayments ========= */
 function renderRepay(){
-  const sel = document.getElementById('rpMember');
+  const sel = byId('rpMember');
   const withLoans = db.members.filter(m=> db.loans.find(l=>l.memberId===m.id && l.principalOut>0 || (l.accruedInterest||0)>0));
   sel.innerHTML = withLoans.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
-  document.getElementById('rpAmt').value='';
-  document.getElementById('rpDate').value = todayStr();
-  document.getElementById('rpApply').value = 'auto';
-  // tx table (recent 15)
+  byId('rpAmt').value='';
+  byId('rpDate').value = todayStr();
+  byId('rpApply').value = 'auto';
   const tbody = document.querySelector('#txTable tbody');
   const last = clone(db.tx).sort((a,b)=> new Date(b.ts) - new Date(a.ts)).slice(0,15);
   tbody.innerHTML = last.map(t=>{
@@ -600,11 +1025,11 @@ function renderRepay(){
     return `<tr><td>${t.ts}</td><td>${m?m.name:''}</td><td>${t.type}</td><td>${UGX(t.amount)}</td></tr>`;
   }).join('');
 }
-document.getElementById('btnPostRepay').onclick = ()=>{
-  const memberId = document.getElementById('rpMember').value;
-  const amt = parseInt(document.getElementById('rpAmt').value||0);
-  const date = document.getElementById('rpDate').value || todayStr();
-  const how = document.getElementById('rpApply').value;
+byId('btnPostRepay').onclick = ()=>{
+  const memberId = byId('rpMember').value;
+  const amt = parseInt(byId('rpAmt').value||0);
+  const date = byId('rpDate').value || todayStr();
+  const how = byId('rpApply').value;
   if(amt<=0){ alert('Enter amount'); return; }
   const loan = db.loans.find(l=>l.memberId===memberId);
   if(!loan){ alert('No active loan'); return; }
@@ -612,31 +1037,22 @@ document.getElementById('btnPostRepay').onclick = ()=>{
   let remain = amt;
   if(how==='auto' || how==='interest'){
     const payInt = Math.min(loan.accruedInterest||0, remain);
-    if(payInt>0){
-      loan.accruedInterest -= payInt;
-      db.tx.push({ts:date, type:'repay_interest', memberId, amount:payInt});
-      remain -= payInt;
-    }
+    if(payInt>0){ loan.accruedInterest -= payInt; db.tx.push({ts:date, type:'repay_interest', memberId, amount:payInt}); remain -= payInt; }
   }
   if((how==='auto' || how==='principal') && remain>0){
     const payP = Math.min(loan.principalOut, remain);
-    if(payP>0){
-      loan.principalOut -= payP;
-      db.tx.push({ts:date, type:'repay_principal', memberId, amount:payP});
-      remain -= payP;
-    }
+    if(payP>0){ loan.principalOut -= payP; db.tx.push({ts:date, type:'repay_principal', memberId, amount:payP}); remain -= payP; }
   }
-  save(); renderRepay(); renderLoans(); renderDashboard();
-  alert('Repayment posted.');
+  save(); renderRepay(); renderLoans(); renderDashboard(); alert('Repayment posted.');
 };
 
 /* ========= Reports ========= */
 function initReports(){
   const y = new Date().getFullYear();
-  document.getElementById('rYear').value = y;
-  document.getElementById('yShareYear').value = y;
-  document.getElementById('quarterOut').innerHTML='';
-  document.getElementById('shareOut').innerHTML='';
+  byId('rYear').value = y;
+  byId('yShareYear').value = y;
+  byId('quarterOut').innerHTML='';
+  byId('shareOut').innerHTML='';
 }
 function quarterRange(q, year){
   const y=Number(year);
@@ -645,21 +1061,18 @@ function quarterRange(q, year){
   if(q==='Q3') return [new Date(y,6,1), new Date(y,8,30)];
   return [new Date(y,9,1), new Date(y,11,31)];
 }
-document.getElementById('btnRunQuarter').onclick = ()=>{
-  const q = document.getElementById('rQuarter').value;
-  const y = parseInt(document.getElementById('rYear').value||new Date().getFullYear());
+byId('btnRunQuarter').onclick = ()=>{
+  const q = byId('rQuarter').value;
+  const y = parseInt(byId('rYear').value||new Date().getFullYear());
   const [a,b] = quarterRange(q,y);
-  const inRange = t => {
-    const d = new Date(t.ts);
-    return d>=a && d<=b;
-  };
+  const inRange = t => { const d = new Date(t.ts); return d>=a && d<=b; };
   const welfare = db.tx.filter(t=>t.type==='welfare' && inRange(t)).reduce((s,t)=>s+t.amount,0);
   const munno = db.tx.filter(t=>t.type==='munno_deposit' && inRange(t)).reduce((s,t)=>s+t.amount,0);
   const shares = db.tx.filter(t=>t.type==='share_buy' && inRange(t)).reduce((s,t)=>s+t.amount,0);
   const interestRec = db.tx.filter(t=>t.type==='repay_interest' && inRange(t)).reduce((s,t)=>s+t.amount,0);
   const principalRec = db.tx.filter(t=>t.type==='repay_principal' && inRange(t)).reduce((s,t)=>s+t.amount,0);
   const loansOut = db.tx.filter(t=>(t.type==='loan_issue'||t.type==='loan_topup') && inRange(t)).reduce((s,t)=>s+t.amount,0);
-  document.getElementById('quarterOut').innerHTML = `
+  byId('quarterOut').innerHTML = `
     <div class="grid-3">
       <div class="stat"><span class="muted">Welfare contributions</span><b>${UGX(welfare)}</b></div>
       <div class="stat"><span class="muted">Munno deposits</span><b>${UGX(munno)}</b></div>
@@ -672,25 +1085,23 @@ document.getElementById('btnRunQuarter').onclick = ()=>{
     </div>
   `;
 };
-document.getElementById('btnShareOut').onclick = ()=>{
-  const year = parseInt(document.getElementById('yShareYear').value||new Date().getFullYear());
+byId('btnShareOut').onclick = ()=>{
+  const year = parseInt(byId('yShareYear').value||new Date().getFullYear());
   const totalInterest = db.tx.filter(t => t.type==='repay_interest' && new Date(t.ts).getFullYear()===year)
                              .reduce((s,t)=>s+t.amount,0);
   const members = clone(db.members).map(m=> ({...m, shareCap:(m.shares||0)*3000}));
   const pool = members.reduce((s,m)=> s+m.shareCap, 0);
   let html = `<div class="stat"><span class="muted">Total interest (year)</span><b>${UGX(totalInterest)}</b></div>`;
-  if(pool<=0 || totalInterest<=0){
-    html += `<p class="warnmsg" style="margin-top:8px">No share capital or no interest collected for ${year}.</p>`;
-  }else{
+  if(pool<=0 || totalInterest<=0){ html += `<p class="warnmsg" style="margin-top:8px">No share capital or no interest collected for ${year}.</p>`; }
+  else{
     html += `<table class="table" style="margin-top:8px"><thead><tr><th>Member</th><th>Shares</th><th>Share Capital</th><th>Share %</th><th>Payout</th></tr></thead><tbody>`;
     members.forEach(m=>{
-      const pct = m.shareCap/pool;
-      const pay = Math.round(totalInterest * pct);
+      const pct = m.shareCap/pool; const pay = Math.round(totalInterest * pct);
       html += `<tr><td>${m.name}</td><td>${m.shares||0}</td><td>${UGX(m.shareCap)}</td><td>${(pct*100).toFixed(2)}%</td><td>${UGX(pay)}</td></tr>`;
     });
     html += `</tbody></table>`;
   }
-  document.getElementById('shareOut').innerHTML = html;
+  byId('shareOut').innerHTML = html;
 };
 
 /* ========= Backup/Restore ========= */
@@ -700,35 +1111,70 @@ function download(filename, text){
   a.href = URL.createObjectURL(blob); a.download = filename; a.click();
   setTimeout(()=> URL.revokeObjectURL(a.href), 1000);
 }
-document.getElementById('btnBackup').onclick = ()=>{
-  accrueAll(); download('kibiina-backup.json', JSON.stringify(db, null, 2));
-};
-document.getElementById('btnBackup2').onclick = ()=>{
-  accrueAll(); download('kibiina-backup.json', JSON.stringify(db, null, 2));
-};
-document.getElementById('restoreFile').addEventListener('change', handleRestore);
-document.getElementById('restoreFile2').addEventListener('change', handleRestore);
-function handleRestore(e){
-  const f = e.target.files[0]; if(!f) return;
-  const r = new FileReader();
-  r.onload = ()=>{ try{
-      const obj = JSON.parse(r.result);
-      if(!obj.members||!obj.loans||!obj.tx){ alert('Invalid file'); return;}
-      db = obj; save(); location.reload();
-    }catch(err){ alert('Invalid JSON'); } };
-  r.readAsText(f);
+async function exportAll(includeFiles=true){
+  // Ensure interest up to date
+  accrueAll();
+  const payload = { db, version:'v2', exportedAt: new Date().toISOString() };
+  if(includeFiles){
+    const assets = await listAllAssets();
+    // convert to data URLs (base64)
+    const list = [];
+    for(const rec of assets){
+      const dataUrl = await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(rec.blob); });
+      list.push({ id:rec.id, name:rec.name, type:rec.type, size:rec.size, created:rec.created, dataUrl });
+    }
+    payload.assets = list;
+  }
+  download(`kibiina-backup-${Date.now()}.json`, JSON.stringify(payload, null, 2));
 }
-document.getElementById('btnWipe').onclick = ()=>{
-  if(!confirm('This will delete ALL data. Continue?')) return;
-  localStorage.removeItem(KEY); location.reload();
+byId('btnBackup').onclick = ()=> exportAll(true);
+byId('btnBackup2').onclick = ()=> exportAll(true);
+byId('btnBackupLight').onclick = ()=> exportAll(false);
+byId('restoreFile').addEventListener('change', handleRestore);
+byId('restoreFile2').addEventListener('change', handleRestore);
+async function handleRestore(e){
+  const f = e.target.files[0]; if(!f) return;
+  const txt = await f.text();
+  try{
+    const obj = JSON.parse(txt);
+    if(!obj.db || !obj.db.members || !obj.db.loans || !obj.db.tx){ alert('Invalid file'); return; }
+    // Replace DB
+    db = obj.db; save();
+    // Import assets if present
+    if(Array.isArray(obj.assets)){
+      for(const a of obj.assets){
+        // Recreate blob from dataUrl
+        const res = await fetch(a.dataUrl); const blob = await res.blob();
+        await new Promise((resolve,reject)=>{
+          const tx = idb.transaction('assets','readwrite');
+          tx.objectStore('assets').put({id:a.id, name:a.name, type:a.type, size:a.size, created:a.created||Date.now(), blob});
+          tx.oncomplete=resolve; tx.onerror=reject;
+        });
+      }
+    }
+    location.reload();
+  }catch(err){ console.error(err); alert('Invalid JSON'); }
+}
+byId('btnWipe').onclick = ()=>{
+  if(!confirm('This will delete ALL data and uploaded files. Continue?')) return;
+  localStorage.removeItem(KEY);
+  // wipe IDB
+  idb.close();
+  const delReq = indexedDB.deleteDatabase('kibiina_assets_v1');
+  delReq.onsuccess = ()=> location.reload();
+  delReq.onerror = ()=>{ alert('Failed to reset files DB. You can clear site data from your browser settings.'); location.reload(); };
 };
 
-/* ========= On load render ========= */
-renderMembers();
-initMeeting();
-renderLoans();
-renderRepay();
-initReports();
+/* ========= On load ========= */
+(async function(){
+  await idbOpen();
+  renderMembers();
+  renderRegistrarSelect();
+  initMeeting();
+  renderLoans();
+  renderRepay();
+  initReports();
+})();
 </script>
 </body>
 </html>
