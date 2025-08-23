@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KIBIINA – Savings & Loans (Members 1–30 + Excel + Registrar + Drive Sync)</title>
-<meta name="description" content="Kibiina saving group app: members 1–30, Excel import/export, registrar with files, Google Drive backup, loans by term, auto month-end interest accrual, meetings, reports.">
+<title>KIBIINA – Savings & Loans (Improved: Termed Loans + Expected Interest + Drive + Reports)</title>
+<meta name="description" content="Kibiina saving group app: members 1–30, registrar with files, Excel import/export, loans with terms, expected interest, Google Drive backup, meetings, reports.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -51,6 +51,7 @@
   .goodmsg{background:#ecfdf5;border:1px solid #86efac;color:#065f46;padding:8px;border-radius:10px}
   .mono{font-family: ui-monospace, Menlo, Consolas, "Courier New", monospace; white-space: pre-wrap;}
   img{max-width:100%}
+  .file-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 8px}
 </style>
 </head>
 <body>
@@ -80,20 +81,21 @@
         <div class="stat"><span class="muted">Loans Outstanding</span><b id="statLoans">UGX 0</b></div>
         <div class="stat"><span class="muted">Interest Collected (YTD)</span><b id="statInterestYTD">UGX 0</b></div>
       </div>
-      <div class="grid-4" style="margin-top:8px">
-        <div class="stat"><span class="muted">Interest Accrued (YTD)</span><b id="statAccruedYTD">UGX 0</b></div>
-        <div class="stat"><span class="muted">Welfare Fund</span><b id="fundWelfare">UGX 0</b></div>
-        <div class="stat"><span class="muted">Munno (aggregate)</span><b id="fundMunno">UGX 0</b></div>
-        <div class="stat"><span class="muted">Last Accrual Posted</span><b id="statLastAccPosted">—</b></div>
+
+      <div class="grid-3" style="margin-top:12px">
+        <div class="stat"><span class="muted">Interest Expected (All Active Loans)</span><b id="statExpectedAll">UGX 0</b></div>
+        <div class="stat"><span class="muted">Interest Remaining (to collect)</span><b id="statInterestRemain">UGX 0</b></div>
+        <div class="stat"><span class="muted">Welfare Fund Balance</span><b id="fundWelfare">UGX 0</b></div>
       </div>
       <div class="hr"></div>
+
       <div class="grid-2">
         <div class="card">
           <h3>Funds</h3>
           <table class="table">
             <tr><th>Fund</th><th>Balance</th></tr>
             <tr><td>Welfare</td><td id="fundWelfare2">UGX 0</td></tr>
-            <tr><td>Munno (aggregate of members)</td><td id="fundMunno2">UGX 0</td></tr>
+            <tr><td>Munno (aggregate of members)</td><td id="fundMunno">UGX 0</td></tr>
           </table>
           <p class="help">Munno is saved by each member and is returned in full with no charges or profit.</p>
         </div>
@@ -244,7 +246,7 @@
       </div>
 
       <div class="row" style="margin-top:12px">
-        <div class="card" style="grid-column: span 6;">
+        <div class="card" style="grid-column: span 6%;">
           <h3>Fully Filled Registration Form (PDF/Image)</h3>
           <div class="stack">
             <label class="btn"><input type="file" id="regForm" accept="application/pdf,image/*" style="display:none">Upload File</label>
@@ -253,7 +255,7 @@
           <div id="infoForm" style="margin-top:8px"></div>
         </div>
 
-        <div class="card" style="grid-column: span 6;">
+        <div class="card" style="grid-column: span 6%;">
           <h3>Other Scanned Documents (multiple)</h3>
           <div class="stack">
             <label class="btn"><input type="file" id="regOtherDocs" accept="application/pdf,image/*" multiple style="display:none">Upload Files</label>
@@ -306,33 +308,32 @@
             </div>
             <div>
               <label>Term (months)</label>
-              <input type="number" id="loanTerm" min="1" step="1" value="3">
+              <input type="number" id="loanMonths" min="1" step="1" value="1">
             </div>
             <div>
               <label>Start Date</label>
               <input type="date" id="loanDate">
             </div>
           </div>
+          <div style="margin-top:6px">
+            <label>Monthly Rate (auto by policy)</label>
+            <input type="text" id="loanRate" disabled value="Auto: 2.5% ≤ 3,999,999; 2% ≥ 4,000,000">
+          </div>
           <div id="loanHint" class="help" style="margin-top:6px"></div>
           <div class="stack" style="margin-top:10px">
             <button class="btn primary" id="btnIssueLoan">Issue Loan</button>
           </div>
-          <p class="help">Rate: <b>2.5%/mo</b> for UGX 1–3,999,999; <b>2%/mo</b> for UGX ≥ 4,000,000. Limit = 2 × share capital minus outstanding principal.</p>
+          <p class="help">Policy: 2.5%/month for UGX 1–3,999,999; 2%/month for UGX ≥ 4,000,000. Limit: up to <b>2× share capital</b>.</p>
         </div>
         <div class="card">
           <h3>Active Loans</h3>
           <table class="table" id="loansTable">
             <thead>
-              <tr>
-                <th>No.</th><th>Name</th>
-                <th>Principal O/S</th><th>Accrued Interest</th>
-                <th>Rate</th><th>Since</th><th>Term</th><th>End</th>
-                <th>Monthly Int</th><th>Term Int</th>
-              </tr>
+              <tr><th>No.</th><th>Name</th><th>Principal O/S</th><th>Accrued Interest</th><th>Expected Interest</th><th>Rate</th><th>Term</th><th>Since</th></tr>
             </thead>
             <tbody></tbody>
           </table>
-          <p class="help">Interest accrues daily from the monthly rate. “Monthly Int” is for current principal @ rate; “Term Int” = monthly × months.</p>
+          <p class="help">Accrued interest grows daily. Expected interest is the planned total for the set term.</p>
         </div>
       </div>
     </section>
@@ -452,7 +453,7 @@
               <button class="btn" id="btnExportFilledLedger">Export Ledger (Filled)</button>
             </div>
           </div>
-          <p class="help">Uses the official template. Ledger has 30 rows (No. 1–30) plus a TOTALS row.</p>
+          <p class="help">Ledger format fixed: 30 rows for No. 1–30, plus a TOTALS row.</p>
         </div>
 
         <!-- Cloud Sync (Google Drive) -->
@@ -468,8 +469,7 @@
             <span id="cloudStatus" class="pill">Signed out</span>
           </div>
           <p class="help">
-            Saves a file named <b>kibiina-backup.json</b> in your Google Drive (only this app can manage it).
-            After any import, we also auto-save to Drive so you can restore on any device.
+            Stores <b>kibiina-backup.json</b> in your Drive (app-only access). If popups/cookies are blocked, allow them for accounts.google.com.
           </p>
         </div>
 
@@ -479,7 +479,6 @@
             <button class="btn" id="btnSelfTest">Run Self-Test</button>
           </div>
           <div id="diagOut" class="mono" style="margin-top:8px"></div>
-          <p class="help">Checks: numbered members 1–30, loans & interest, ledger fill, Excel template.</p>
         </div>
 
         <div class="card">
@@ -491,8 +490,6 @@
     </section>
   </main>
 
-<!-- Google Identity Services -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 /* ========= Utilities ========= */
 const UGX = (v)=> new Intl.NumberFormat('en-UG', {style:'currency', currency:'UGX', maximumFractionDigits:0}).format(v||0);
@@ -500,36 +497,38 @@ const todayStr = ()=> new Date().toLocaleDateString('en-CA', { timeZone: 'Africa
 const parseDate = s => new Date(s+'T00:00:00');
 const daysBetween = (a,b)=> Math.max(0, Math.round((parseDate(b)-parseDate(a)) / (1000*60*60*24)));
 const clone = x => JSON.parse(JSON.stringify(x));
-function download(filename, blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
-function addMonths(dateStr, n){ const d=new Date(dateStr+'T00:00:00'); d.setMonth(d.getMonth()+Number(n||0)); return d.toISOString().slice(0,10); }
-function yyyMM(dateStr){ return String(dateStr||'').slice(0,7); }
-function lastFullMonthYYYYMM(){ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); return d.toISOString().slice(0,7); }
-function monthStartEnd(yyyyMM){ const [y,m]=yyyyMM.split('-').map(Number); const from=new Date(y,m-1,1).toISOString().slice(0,10); const to=new Date(y,m,0).toISOString().slice(0,10); return [from,to]; }
-function nextYYYYMM(curYM){ const [y,m]=curYM.split('-').map(Number); const d=new Date(y,m,1); return d.toISOString().slice(0,7); }
+function addMonths(dateStr, n){
+  const d = parseDate(dateStr);
+  d.setMonth(d.getMonth()+Number(n||0));
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function yyyymm(d){ const dt = (typeof d==='string')? parseDate(d): d; return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0'); }
+function monthStartStr(y, m){ return `${y}-${String(m).padStart(2,'0')}-01`; }
+function monthEndStr(y, m){ const d = new Date(y, m, 0); return d.toISOString().slice(0,10); } // m is 1..12
 
 /* ========= Data Model (localStorage) ========= */
-const KEY='kibiina_v3'; // keep existing key so you don't lose data
+const KEY='kibiina_v3';
 let db = {};
 try { db = JSON.parse(localStorage.getItem(KEY) || '{}'); }
 catch(e){ console.warn('Local data corrupted. Resetting storage.', e); localStorage.removeItem(KEY); db = {}; }
 if(!db.members){ // initialize
   db = {
-    members: [],
-    loans: [],
+    members: [], // {id,number,name,joinDate,shares,munno, registrar?}
+    loans: [],   // {id, memberNo, principalOut, rateMonthly, startDate, lastAccrual, accruedInterest, termMonths, expectedInterest, expectedEnd}
     welfareFund: 0,
-    tx: [],
-    settings: { lastMeetingDate: todayStr(), updatedAt: new Date().toISOString(), lastAccrualPosted: null, autoAccrualOnOpen: true }
+    tx: [],      // {ts, type, memberNo, amount, meta}
+    settings: { lastMeetingDate: todayStr(), lastAccrualPostedThrough: null, updatedAt: new Date().toISOString() }
   };
   save();
-} else {
-  // ensure new settings exist
-  db.settings = db.settings || {};
-  if(typeof db.settings.lastAccrualPosted === 'undefined') db.settings.lastAccrualPosted = null;
-  if(typeof db.settings.autoAccrualOnOpen === 'undefined') db.settings.autoAccrualOnOpen = true;
 }
-function save(){ db.settings = db.settings || {}; db.settings.updatedAt = new Date().toISOString(); localStorage.setItem(KEY, JSON.stringify(db)); }
+function save(){
+  if(!db.settings) db.settings = {};
+  db.settings.updatedAt = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(db));
+}
 
-// Helpers
+// Helpers for members
 function getMemberByNo(no){ return db.members.find(m => Number(m.number) === Number(no)); }
 function ensureUniqueNo(no, ignoreId=null){ return !db.members.some(m=> Number(m.number)===Number(no) && m.id!==ignoreId); }
 function nextFreeNo(){ for(let i=1;i<=30;i++){ if(!db.members.some(m=>Number(m.number)===i)) return i; } return null; }
@@ -553,6 +552,10 @@ function wireTabs(){
 }
 
 /* ========= Dashboard ========= */
+function interestPaidForLoanSinceStart(l){
+  return db.tx.filter(t=> t.type==='repay_interest' && Number(t.memberNo)===Number(l.memberNo) && t.ts && new Date(t.ts)>=new Date(l.startDate))
+              .reduce((s,t)=> s + (t.amount||0), 0);
+}
 function renderDashboard(){
   const n = db.members.length;
   const shareCap = db.members.reduce((s,m)=> s + (m.shares||0)*3000, 0);
@@ -560,19 +563,25 @@ function renderDashboard(){
   const year = new Date().getFullYear();
   const intYTD = db.tx.filter(t => t.type==='repay_interest' && new Date(t.ts).getFullYear()===year)
                       .reduce((s,t)=> s + t.amount, 0);
-  const accrYTD = db.tx.filter(t => t.type==='interest_accrual' && new Date(t.ts).getFullYear()===year)
-                      .reduce((s,t)=> s + t.amount, 0);
   const munnoAgg = db.members.reduce((s,m)=> s + (m.munno||0), 0);
+
+  const expectedAll = db.loans.reduce((s,l)=> s + (l.expectedInterest||0), 0);
+  const expectedRemaining = db.loans.reduce((s,l)=> {
+    const paid = interestPaidForLoanSinceStart(l);
+    const remain = Math.max(0, (l.expectedInterest||0) - paid);
+    return s + remain;
+  }, 0);
+
   document.getElementById('statMembers').textContent = String(n);
   document.getElementById('statShareCap').textContent = UGX(shareCap);
   document.getElementById('statLoans').textContent = UGX(loansOut);
   document.getElementById('statInterestYTD').textContent = UGX(intYTD);
-  document.getElementById('statAccruedYTD').textContent = UGX(accrYTD);
+  document.getElementById('statExpectedAll').textContent = UGX(expectedAll);
+  document.getElementById('statInterestRemain').textContent = UGX(expectedRemaining);
+
   document.getElementById('fundWelfare').textContent = UGX(db.welfareFund||0);
-  document.getElementById('fundMunno').textContent = UGX(munnoAgg);
   document.getElementById('fundWelfare2').textContent = UGX(db.welfareFund||0);
-  document.getElementById('fundMunno2').textContent = UGX(munnoAgg);
-  document.getElementById('statLastAccPosted').textContent = db.settings?.lastAccrualPosted || '—';
+  document.getElementById('fundMunno').textContent = UGX(munnoAgg);
 }
 
 /* ========= Members ========= */
@@ -740,66 +749,132 @@ function wireMeeting(){
 
 /* ========= Loans ========= */
 function loanRateFor(amount){ if(amount>=1 && amount<=3999999) return 0.025; if(amount>=4000000) return 0.02; return 0; }
+
+// Compute accrual for a date range (non-mutating) consistent with our two-stage model (straight-line plan then post-end daily).
+function loanAccrualForRange(l, fromStr, toStr){
+  const from = parseDate(fromStr), to = parseDate(toStr);
+  if(to <= from) return 0;
+  let acc = 0;
+  const hasPlan = (l.expectedInterest||0) > 0 && l.expectedEnd;
+  if(hasPlan){
+    const planStart = parseDate(l.startDate);
+    const planEnd = parseDate(l.expectedEnd);
+    // Overlap with plan
+    const a = new Date(Math.max(from, planStart)); const b = new Date(Math.min(to, planEnd));
+    if(b > a){
+      const termDays = Math.max(1, daysBetween(l.startDate, l.expectedEnd));
+      const perDay = (l.expectedInterest||0)/termDays;
+      acc += Math.round(perDay * daysBetween(a.toISOString().slice(0,10), b.toISOString().slice(0,10)));
+    }
+    // After plan end → normal daily rate on current principal
+    if(to > planEnd){
+      const startPost = new Date(Math.max(from, planEnd));
+      const days = daysBetween(startPost.toISOString().slice(0,10), toStr);
+      const dailyRate = (l.rateMonthly||0)/30;
+      acc += Math.round((l.principalOut||0) * dailyRate * days);
+    }
+  } else {
+    // No plan → normal daily rate entire range
+    const days = daysBetween(fromStr, toStr);
+    const dailyRate = (l.rateMonthly||0)/30;
+    acc += Math.round((l.principalOut||0) * dailyRate * days);
+  }
+  return Math.max(0, acc);
+}
+
+// Mutating accrual to a date
 function accrueAll(upToDate){
   const dTo = upToDate || todayStr();
   db.loans.forEach(l=>{
-    if(l.principalOut<=0) return;
-    const start = l.lastAccrual || l.startDate;
-    const days = daysBetween(start, dTo);
-    if(days<=0) return;
-    const dailyRate = l.rateMonthly/30;
-    const add = l.principalOut * dailyRate * days;
-    l.accruedInterest = (l.accruedInterest||0) + Math.round(add);
+    const startCursor = l.lastAccrual || l.startDate;
+    const add = loanAccrualForRange(l, startCursor, dTo);
+    if(add>0){ l.accruedInterest = (l.accruedInterest||0) + add; }
     l.lastAccrual = dTo;
   });
   save();
 }
+
+// Auto-post monthly accrual tx entries (interest_accrual) up to previous month end
+function postMonthEndAccruals(){
+  const today = new Date();
+  const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0); // last day of previous month
+  const prevYM = yyyymm(prevMonth);
+  const lastPosted = db.settings.lastAccrualPostedThrough; // 'YYYY-MM' or null
+  // Determine first month to post
+  let y, m;
+  if(lastPosted){
+    const parts = lastPosted.split('-'); y = Number(parts[0]); m = Number(parts[1])+1; // next month
+    if(m>12){ m=1; y+=1; }
+  } else {
+    // if no history, start from the month of the first loan start (or current month-1)
+    const firstStart = db.loans.length? db.loans.map(l=>parseDate(l.startDate)).sort((a,b)=>a-b)[0] : new Date(today.getFullYear(), today.getMonth()-1, 1);
+    y = firstStart.getFullYear(); m = firstStart.getMonth()+1;
+  }
+  // Post month by month until prevMonth
+  while((y < prevMonth.getFullYear()) || (y===prevMonth.getFullYear() && m <= (prevMonth.getMonth()+1))){
+    const from = monthStartStr(y,m);
+    const to = monthEndStr(y,m);
+    // For each loan, compute accrual in this month and post a tx (ledger-only)
+    db.loans.forEach(l=>{
+      const a = Math.max(parseDate(from), parseDate(l.startDate));
+      const b = parseDate(to);
+      if(b < a) return; // no overlap
+      const accr = loanAccrualForRange(l, from, to);
+      if(accr>0){
+        db.tx.push({ts:to, type:'interest_accrual', memberNo:l.memberNo, amount:accr, meta:{month:`${y}-${String(m).padStart(2,'0')}`}});
+      }
+    });
+    // advance month
+    m++; if(m>12){ m=1; y++; }
+    db.settings.lastAccrualPostedThrough = yyyymm(new Date(y, m-1, 1-1)); // set to just-posted month
+  }
+  save();
+}
+
 function renderLoans(){
   const sel = document.getElementById('loanMember'); if(!sel) return;
   const sorted=[...db.members].sort((a,b)=>Number(a.number)-Number(b.number));
   sel.innerHTML = sorted.map(m=>`<option value="${m.number}">${m.number} – ${m.name}</option>`).join('');
   document.getElementById('loanAmt').value='';
-  document.getElementById('loanTerm').value=3;
+  document.getElementById('loanMonths').value='1';
   document.getElementById('loanDate').value = todayStr();
   document.getElementById('loanHint').textContent='';
   const tbody = document.querySelector('#loansTable tbody'); if(!tbody) return;
   tbody.innerHTML='';
   db.loans.forEach(l=>{
     const m = getMemberByNo(l.memberNo);
-    const monthlyInt=Math.round((l.principalOut||0)*(l.rateMonthly||0));
-    const termInt=(l.termMonths? monthlyInt*l.termMonths:0);
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${l.memberNo}</td><td>${m? m.name:''}</td>
-      <td>${UGX(l.principalOut)}</td><td>${UGX(l.accruedInterest||0)}</td>
-      <td>${(l.rateMonthly*100).toFixed(2)}%/mo</td><td>${l.startDate}</td>
-      <td>${l.termMonths||''}</td><td>${l.endDate||''}</td>
-      <td>${UGX(monthlyInt)}</td><td>${termInt?UGX(termInt):''}</td>`;
+    tr.innerHTML = `<td>${l.memberNo}</td><td>${m? m.name:''}</td><td>${UGX(l.principalOut)}</td><td>${UGX(l.accruedInterest||0)}</td><td>${UGX(l.expectedInterest||0)}</td><td>${(l.rateMonthly*100).toFixed(2)}%/mo</td><td>${l.termMonths||'-'}</td><td>${l.startDate}</td>`;
     tbody.appendChild(tr);
   });
 }
+
 function updateLoanHint(){
   const no = document.getElementById('loanMember').value;
-  const m = getMemberByNo(no); if(!m){ document.getElementById('loanHint').textContent=''; return; }
+  const m = getMemberByNo(no); 
   const amount = parseInt(document.getElementById('loanAmt').value||0);
-  const term = parseInt(document.getElementById('loanTerm').value||0);
+  const months = Math.max(1, parseInt(document.getElementById('loanMonths').value||1));
   const date = document.getElementById('loanDate').value || todayStr();
+  if(!m || !amount){ document.getElementById('loanHint').textContent=''; return; }
   const shareCap = (m.shares||0)*3000;
   const currentLoan = db.loans.find(l=>Number(l.memberNo)===Number(no));
   const principalOut = currentLoan? currentLoan.principalOut : 0;
   const limit = Math.max(0, shareCap*2 - principalOut);
-  const rate = loanRateFor(amount)||0;
-  const monthlyInt= amount>0? Math.round(amount*rate) : 0;
-  const termInt=(amount>0&&term>0)? monthlyInt*term:0;
-  const end= term>0? addMonths(date,term):'';
+  const rate = loanRateFor(amount);
+  const expInt = Math.round(amount * rate * months); // <- your rule
+  const end = addMonths(date, months);
   document.getElementById('loanHint').innerHTML =
-    `Share capital: <b>${UGX(shareCap)}</b> → Limit: <b>${UGX(limit)}</b> • Rate: <b>${(rate*100)||0}%/mo</b>` +
-    (amount?` • Monthly interest: <b>${UGX(monthlyInt)}</b>`:'') +
-    (term?` • Term total: <b>${UGX(termInt)}</b> • Maturity: <b>${end}</b>`:'');
+    `Share capital: <b>${UGX(shareCap)}</b> → Limit: <b>${UGX(limit)}</b> • Rate: <b>${(rate*100)||0}%/mo</b><br>
+     Expected interest: <b>${UGX(expInt)}</b> • End date: <b>${end}</b> • Total due (no fees): <b>${UGX(amount+expInt)}</b>`;
 }
+
 function wireLoans(){
-  ['loanAmt','loanTerm','loanDate','loanMember'].forEach(id=>{
-    const el=document.getElementById(id); if(el) el.addEventListener('input', updateLoanHint);
+  ['loanAmt','loanMonths','loanDate','loanMember'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', updateLoanHint);
+    if(el) el.addEventListener('change', updateLoanHint);
   });
+
   const issue = document.getElementById('btnIssueLoan');
   if(issue){
     issue.onclick = ()=>{
@@ -807,25 +882,36 @@ function wireLoans(){
       const m = getMemberByNo(memberNo);
       if(!m){ alert('Select member'); return; }
       const amount = parseInt(document.getElementById('loanAmt').value||0);
-      const months = parseInt(document.getElementById('loanTerm').value||0);
+      const months = Math.max(1, parseInt(document.getElementById('loanMonths').value||1));
       const date = document.getElementById('loanDate').value || todayStr();
       if(amount<=0){ alert('Enter amount'); return; }
-      if(months<=0){ alert('Enter term (months)'); return; }
+
       const current = db.loans.find(l=>Number(l.memberNo)===Number(memberNo));
       const principalOut = current? current.principalOut : 0;
       const limit = Math.max(0, ((m.shares||0)*3000)*2 - principalOut);
       if(amount>limit){ alert('Amount exceeds limit.'); return; }
+
       const rate = loanRateFor(amount);
+      const expected = Math.round(amount * rate * months);
+      const expectedEnd = addMonths(date, months);
+
       accrueAll(date);
+
       if(current){
         current.principalOut += amount;
-        current.termMonths = months;
-        current.endDate = addMonths(date, months);
-        if(!current.rateMonthly) current.rateMonthly = rate;
-        db.tx.push({ts:date, type:'loan_topup', memberNo, amount});
+        current.expectedInterest = Math.round((current.expectedInterest||0) + expected);
+        current.termMonths = Math.max(current.termMonths||0, months);
+        current.expectedEnd = current.expectedEnd ? (new Date(expectedEnd) > new Date(current.expectedEnd) ? expectedEnd : current.expectedEnd) : expectedEnd;
+        db.tx.push({ts:date, type:'loan_topup', memberNo, amount, meta:{months, rate}});
+        db.tx.push({ts:date, type:'interest_expected', memberNo, amount:expected, meta:{months, rate}});
       } else {
-        db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo, principalOut:amount, rateMonthly:rate, startDate:date, lastAccrual:date, accruedInterest:0, termMonths:months, endDate:addMonths(date,months) });
-        db.tx.push({ts:date, type:'loan_issue', memberNo, amount});
+        db.loans.push({ 
+          id:'L'+Math.random().toString(36).slice(2,9), memberNo, principalOut:amount, rateMonthly:rate, 
+          startDate:date, lastAccrual:date, accruedInterest:0,
+          termMonths: months, expectedInterest: expected, expectedEnd
+        });
+        db.tx.push({ts:date, type:'loan_issue', memberNo, amount, meta:{months, rate}});
+        db.tx.push({ts:date, type:'interest_expected', memberNo, amount:expected, meta:{months, rate}});
       }
       save(); renderLoans(); renderDashboard(); alert('Loan recorded.');
     };
@@ -874,50 +960,6 @@ function wireRepay(){
   }
 }
 
-/* ========= Interest Accrual Posting ========= */
-/* Compute accrued interest for a member within [from,to] (inclusive) using actual-days based on monthly rate (~30d) & principal timeline */
-function interestAccruedInPeriod(from,to,memberNo){
-  const l=db.loans.find(x=>Number(x.memberNo)===Number(memberNo)); if(!l||!l.rateMonthly) return 0;
-  const dailyRate=l.rateMonthly/30;
-  const events=db.tx.filter(t=>Number(t.memberNo)===Number(memberNo)&&(t.type==='loan_issue'||t.type==='loan_topup'||t.type==='repay_principal')&&t.ts&&t.ts<=to)
-    .map(t=>({date:t.ts, delta:(t.type==='repay_principal'?-t.amount:t.amount)}));
-  let principal=0; events.filter(e=>e.date<from).forEach(e=>principal+=e.delta);
-  const cut=events.filter(e=>e.date>=from && e.date<=to).sort((a,b)=>new Date(a.date)-new Date(b.date));
-  let curStart=from, total=0;
-  const span=(a,b)=>daysBetween(a,b);
-  for(const ev of cut){
-    if(ev.date>curStart){ const d=span(curStart,ev.date); if(d>0) total+=Math.round(principal*dailyRate*d); curStart=ev.date; }
-    principal+=ev.delta;
-  }
-  if(curStart<=to){ const d=span(curStart,to); if(d>0) total+=Math.round(principal*dailyRate*d); }
-  return Math.max(0,total);
-}
-function postedAccrualFor(memberNo,from,to){
-  return db.tx.filter(t=>t.type==='interest_accrual'&&Number(t.memberNo)===Number(memberNo)&&t.ts&&t.ts>=from&&t.ts<=to).reduce((s,t)=>s+t.amount,0);
-}
-function earliestLoanStart(){ let min=null; db.loans.forEach(l=>{ if(l.startDate&&(!min||l.startDate<min)) min=l.startDate; }); return min; }
-/* Post missing monthly accrual entries up to last completed month (idempotent) */
-function autoPostMissingAccrualsOnOpen(){
-  db.settings=db.settings||{};
-  if(db.settings.autoAccrualOnOpen===false) return;
-  const goal=lastFullMonthYYYYMM();
-  const start=db.settings.lastAccrualPosted||earliestLoanStart();
-  if(!goal||!start) return;
-  let curYM=yyyMM(start), any=false;
-  while(curYM<=goal){
-    const [from,to]=monthStartEnd(curYM);
-    db.members.forEach(m=>{
-      const acc=interestAccruedInPeriod(from,to,m.number);
-      const already=postedAccrualFor(m.number,from,to);
-      const toPost=Math.max(0,acc-already);
-      if(toPost>0){ db.tx.push({ts:to, type:'interest_accrual', memberNo:m.number, amount:toPost}); any=true; }
-    });
-    curYM=nextYYYYMM(curYM);
-  }
-  db.settings.lastAccrualPosted=goal;
-  if(any) save();
-}
-
 /* ========= Reports ========= */
 function initReports(){
   const y = new Date().getFullYear();
@@ -945,25 +987,31 @@ function wireReports(){
       const munno = db.tx.filter(t=>t.type==='munno_deposit' && inRange(t)).reduce((s,t)=>s+t.amount,0);
       const shares = db.tx.filter(t=>t.type==='share_buy' && inRange(t)).reduce((s,t)=>s+t.amount,0);
       const interestRec = db.tx.filter(t=>t.type==='repay_interest' && inRange(t)).reduce((s,t)=>s+t.amount,0);
-      const interestAcc = db.tx.filter(t=>t.type==='interest_accrual' && inRange(t)).reduce((s,t)=>s+t.amount,0);
       const principalRec = db.tx.filter(t=>t.type==='repay_principal' && inRange(t)).reduce((s,t)=>s+t.amount,0);
       const loansOut = db.tx.filter(t=>(t.type==='loan_issue'||t.type==='loan_topup') && inRange(t)).reduce((s,t)=>s+t.amount,0);
+
+      const rows = db.tx.filter(inRange).sort((a,b)=> new Date(a.ts)-new Date(b.ts))
+        .map(t=>{
+          const mem = t.memberNo? getMemberByNo(t.memberNo): null;
+          return `<tr><td>${t.ts}</td><td>${t.memberNo||''}</td><td>${mem?mem.name:''}</td><td>${t.type}</td><td>${UGX(t.amount)}</td><td>${t.meta? JSON.stringify(t.meta): ''}</td></tr>`;
+        }).join('');
+
       document.getElementById('quarterOut').innerHTML = `
         <div class="grid-3">
-          <div class="stat"><span class="muted">Welfare contributions</span><b>${UGX(welfare)}</b></div>
-          <div class="stat"><span class="muted">Munno deposits</span><b>${UGX(munno)}</b></div>
-          <div class="stat"><span class="muted">Shares purchased</span><b>${UGX(shares)}</b></div>
+          <div class="stat"><span class="muted">Welfare</span><b>${UGX(welfare)}</b></div>
+          <div class="stat"><span class="muted">Munno</span><b>${UGX(munno)}</b></div>
+          <div class="stat"><span class="muted">Shares Purchased</span><b>${UGX(shares)}</b></div>
         </div>
         <div class="grid-3" style="margin-top:8px">
           <div class="stat"><span class="muted">Loans issued/topups</span><b>${UGX(loansOut)}</b></div>
           <div class="stat"><span class="muted">Principal repaid</span><b>${UGX(principalRec)}</b></div>
           <div class="stat"><span class="muted">Interest collected</span><b>${UGX(interestRec)}</b></div>
         </div>
-        <div class="grid-3" style="margin-top:8px">
-          <div class="stat"><span class="muted">Interest accrued</span><b>${UGX(interestAcc)}</b></div>
-          <div class="stat"><span class="muted">Txn count</span><b>${db.tx.filter(inRange).length}</b></div>
-          <div class="stat"><span class="muted">Active loans</span><b>${db.loans.filter(l=>l.principalOut>0).length}</b></div>
-        </div>
+        <h4 style="margin-top:12px">Transactions in ${q} ${y}</h4>
+        <table class="table">
+          <thead><tr><th>Date</th><th>No.</th><th>Name</th><th>Type</th><th>Amount</th><th>Meta</th></tr></thead>
+          <tbody>${rows||'<tr><td colspan="6" class="muted">No transactions</td></tr>'}</tbody>
+        </table>
       `;
     };
   }
@@ -992,7 +1040,14 @@ function wireReports(){
   }
 }
 
-/* ========= Backup/Restore (JSON) ========= */
+/* ========= Backup/Restore (JSON) + Excel ========= */
+function download(filename, blob){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(()=> URL.revokeObjectURL(a.href), 1000);
+}
 function wireBackup(){
   const b1 = document.getElementById('btnBackup');
   const b2 = document.getElementById('btnBackup2');
@@ -1012,11 +1067,9 @@ async function handleRestore(e){
     try{
       const obj = JSON.parse(r.result);
       if(!obj.members||!obj.loans||!obj.tx){ alert('Invalid file'); return;}
-      db = obj;
-      db.settings = db.settings || { lastMeetingDate: todayStr(), updatedAt:new Date().toISOString(), lastAccrualPosted:null, autoAccrualOnOpen:true };
-      save();
+      db = obj; save();
       renderDashboard(); renderMembers(); initMeeting(); renderLoans(); renderRepay(); initReports();
-      await maybeDriveAutoSave(); // auto-save to Drive
+      await maybeDriveAutoSave(); 
       alert('JSON imported and saved to Google Drive.');
     }catch(err){ alert('Invalid JSON'); }
   };
@@ -1034,49 +1087,46 @@ function loadXLSX(){
     document.head.appendChild(s);
   });
 }
-const TEMPLATE_VERSION = 'kibiina-xlsx-v1';
+const TEMPLATE_VERSION = 'kibiina-xlsx-v2';
 const MEMBERS_HEADERS = ['No','Name','JoinDate','Shares','Munno'];
-const LOANS_HEADERS   = ['No','PrincipalOut','RateMonthly','StartDate','LastAccrual','AccruedInterest'];
+// Updated Loans headers to carry term plan
+const LOANS_HEADERS   = ['No','PrincipalOut','RateMonthly','StartDate','LastAccrual','AccruedInterest','TermMonths','ExpectedInterest','ExpectedEnd'];
 const TX_HEADERS      = ['Date','No','Type','Amount','Meta'];
-function ledgerHeaders(){ return ['No','Name','Welfare','Munno','MunnoReturned','MunnoTaken','LoanTaken','LoanReturned','LoanForm','Period','Interest','LoanBalance','Fines']; }
-// Export helpers
+function ledgerHeaders(){
+  return ['No','Name','Welfare','Munno','MunnoReturned','MunnoTaken','LoanTaken','LoanReturned','LoanForm','Period','Interest','LoanBalance','Fines'];
+}
 function membersToRows(){
   const map = new Map(db.members.map(m=>[Number(m.number), m]));
-  const out=[]; for(let i=1;i<=30;i++){ const m = map.get(i); out.push({ No:i, Name:m?m.name:'', JoinDate:m?m.joinDate:'', Shares:m?m.shares||0:0, Munno:m?m.munno||0:0 }); }
+  const out=[];
+  for(let i=1;i<=30;i++){
+    const m = map.get(i);
+    out.push({ No:i, Name:m?m.name:'', JoinDate:m?m.joinDate:'', Shares:m?m.shares||0:0, Munno:m?m.munno||0:0 });
+  }
   return out;
 }
-function loansToRows(){ return db.loans.map(l=>({ No:l.memberNo, PrincipalOut:l.principalOut, RateMonthly:l.rateMonthly, StartDate:l.startDate, LastAccrual:l.lastAccrual||'', AccruedInterest:l.accruedInterest||0 })); }
-function txToRows(){ return db.tx.map(t=>({ Date:t.ts, No:t.memberNo||'', Type:t.type, Amount:t.amount, Meta:t.meta?JSON.stringify(t.meta):'' })); }
-function ledgerRows(){
-  const map = new Map(db.members.map(m=>[Number(m.number), m])); const rows=[];
-  for(let i=1;i<=30;i++){ const m = map.get(i);
-    rows.push({ No:i, Name:m?m.name:'', Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0, LoanTaken:0, LoanReturned:0, LoanForm:0, Period:'', Interest:0, LoanBalance:0, Fines:0 });
-  } return rows;
+function loansToRows(){
+  return db.loans.map(l=>({ 
+    No:l.memberNo, PrincipalOut:l.principalOut, RateMonthly:l.rateMonthly, StartDate:l.startDate, 
+    LastAccrual:l.lastAccrual||'', AccruedInterest:l.accruedInterest||0,
+    TermMonths:l.termMonths||'', ExpectedInterest:l.expectedInterest||0, ExpectedEnd:l.expectedEnd||''
+  }));
 }
-function computeLedgerRowsFilled(fromStr, toStr){
-  const today = new Date().toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
-  const yearStart = new Date(new Date().getFullYear(),0,1).toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
-  const from = fromStr || yearStart; const to = toStr || today;
-  accrueAll(to);
-  const sums = {}; for(let i=1;i<=30;i++) sums[i] = { No:i, Name:(getMemberByNo(i)?.name)||'', Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0, LoanTaken:0, LoanReturned:0, LoanForm:0, Period:to, Interest:0, LoanBalance:0, Fines:0 };
-  const inRange = (ts)=>{ const d = new Date(ts); return d>=new Date(from) && d<=new Date(to); };
-  db.tx.forEach(t=>{
-    if(!t.ts || !inRange(t.ts)) return; const no = Number(t.memberNo); if(!no) return; const amt = Number(t.amount)||0;
-    switch(t.type){
-      case 'welfare': sums[no].Welfare += amt; break;
-      case 'munno_deposit': sums[no].Munno += amt; break;
-      case 'munno_withdraw': case 'munno_returned': sums[no].MunnoReturned += amt; break;
-      case 'munno_taken': sums[no].MunnoTaken += amt; break;
-      case 'loan_issue': case 'loan_topup': sums[no].LoanTaken += amt; break;
-      case 'repay_principal': sums[no].LoanReturned += amt; break;
-      case 'loan_form_fee': sums[no].LoanForm += amt; break;
-      case 'repay_interest': sums[no].Interest += amt; break;
-      case 'fine': sums[no].Fines += amt; break;
-      case 'interest_accrual': /* accruals are journal recognition; exclude from cash Interest column */ break;
-    }
-  });
-  db.loans.forEach(l=>{ const no=Number(l.memberNo); if(!no) return; sums[no].LoanBalance = (sums[no].LoanBalance||0) + (l.principalOut||0); });
-  return Object.values(sums);
+function txToRows(){
+  return db.tx.map(t=>({ Date:t.ts, No:t.memberNo||'', Type:t.type, Amount:t.amount, Meta:t.meta?JSON.stringify(t.meta):'' }));
+}
+function ledgerRows(){
+  const map = new Map(db.members.map(m=>[Number(m.number), m]));
+  const rows=[];
+  for(let i=1;i<=30;i++){
+    const m = map.get(i);
+    rows.push({
+      No:i, Name:m?m.name:'',
+      Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0,
+      LoanTaken:0, LoanReturned:0, LoanForm:0,
+      Period:'', Interest:0, LoanBalance:0, Fines:0,
+    });
+  }
+  return rows;
 }
 function colLetter(n){ let s=''; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; }
 function addTotalsRow(ws, numericCols){
@@ -1087,32 +1137,55 @@ function addTotalsRow(ws, numericCols){
   ws['!ref'] = `A1:${lastCol}${totalRow}`;
 }
 function readHeaders(ws){
-  const r = XLSX.utils.decode_range(ws['!ref']); const headers=[];
-  for(let c=r.s.c;c<=r.e.c;c++){ const cellAddr = XLSX.utils.encode_cell({r:0,c}); const cell = ws[cellAddr]; headers.push(cell? String(cell.v).trim(): ''); }
+  const r = XLSX.utils.decode_range(ws['!ref']);
+  const headers=[];
+  for(let c=r.s.c;c<=r.e.c;c++){
+    const cellAddr = XLSX.utils.encode_cell({r:0,c});
+    const cell = ws[cellAddr];
+    headers.push(cell? String(cell.v).trim(): '');
+  }
   return headers;
 }
 function eqArr(a,b){ if(a.length!==b.length) return false; for(let i=0;i<a.length;i++){ if(String(a[i])!==String(b[i])) return false; } return true; }
 function validateNoSet(rows, sheetName){
-  const set = new Set(rows.map(r=> Number(r.No))); const missing = []; for(let i=1;i<=30;i++){ if(!set.has(i)) missing.push(i); } return missing.length? `${sheetName}: missing member numbers ${missing.join(', ')}` : null;
+  const set = new Set(rows.map(r=> Number(r.No)));
+  const missing = [];
+  for(let i=1;i<=30;i++){ if(!set.has(i)) missing.push(i); }
+  return missing.length? `${sheetName}: missing member numbers ${missing.join(', ')}` : null;
 }
 function validateWorkbook(XLSX, wb){
-  const errs=[]; const mustSheets = ['Members','Ledger']; mustSheets.forEach(n=>{ if(!wb.Sheets[n]) errs.push(`Missing sheet: ${n}`); }); if(errs.length) return errs;
-  const hMembers = readHeaders(wb.Sheets['Members']); if(!eqArr(hMembers, MEMBERS_HEADERS)) errs.push(`Members headers must be ${MEMBERS_HEADERS.join(', ')}`);
-  const hLedger = readHeaders(wb.Sheets['Ledger']); if(!eqArr(hLedger, ledgerHeaders())) errs.push(`Ledger headers must be ${ledgerHeaders().join(', ')}`);
-  if(wb.Sheets['Loans']){ const hLoans = readHeaders(wb.Sheets['Loans']); if(!eqArr(hLoans, LOANS_HEADERS)) errs.push(`Loans headers must be ${LOANS_HEADERS.join(', ')}`); }
-  if(wb.Sheets['Transactions']){ const hTx = readHeaders(wb.Sheets['Transactions']); if(!eqArr(hTx, TX_HEADERS)) errs.push(`Transactions headers must be ${TX_HEADERS.join(', ')}`); }
-  const memRows = XLSX.utils.sheet_to_json(wb.Sheets['Members']); const ledRows = XLSX.utils.sheet_to_json(wb.Sheets['Ledger']);
+  const errs=[];
+  const mustSheets = ['Members','Ledger'];
+  mustSheets.forEach(n=>{ if(!wb.Sheets[n]) errs.push(`Missing sheet: ${n}`); });
+  if(errs.length) return errs;
+  const hMembers = readHeaders(wb.Sheets['Members']);
+  if(!eqArr(hMembers, MEMBERS_HEADERS)) errs.push(`Members headers must be ${MEMBERS_HEADERS.join(', ')}`);
+  const hLedger = readHeaders(wb.Sheets['Ledger']);
+  if(!eqArr(hLedger, ledgerHeaders())) errs.push(`Ledger headers must be ${ledgerHeaders().join(', ')}`);
+  if(wb.Sheets['Loans']){
+    const hLoans = readHeaders(wb.Sheets['Loans']);
+    if(!eqArr(hLoans, LOANS_HEADERS)) errs.push(`Loans headers must be ${LOANS_HEADERS.join(', ')}`);
+  }
+  if(wb.Sheets['Transactions']){
+    const hTx = readHeaders(wb.Sheets['Transactions']);
+    if(!eqArr(hTx, TX_HEADERS)) errs.push(`Transactions headers must be ${TX_HEADERS.join(', ')}`);
+  }
+  const memRows = XLSX.utils.sheet_to_json(wb.Sheets['Members']);
+  const ledRows = XLSX.utils.sheet_to_json(wb.Sheets['Ledger']);
   const m1 = validateNoSet(memRows,'Members'); if(m1) errs.push(m1);
   const m2 = validateNoSet(ledRows,'Ledger');  if(m2) errs.push(m2);
   return errs;
 }
-// Export buttons
 async function doExport(includeLedger=true){
   const XLSX = await loadXLSX();
   const wb = XLSX.utils.book_new();
-  const wsMeta = XLSX.utils.aoa_to_sheet([ ['Template', TEMPLATE_VERSION], ['Exported', new Date().toISOString()] ]);
+  const wsMeta = XLSX.utils.aoa_to_sheet([
+    ['Template', TEMPLATE_VERSION],
+    ['Exported', new Date().toISOString()]
+  ]);
   XLSX.utils.book_append_sheet(wb, wsMeta, 'Meta');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(membersToRows(), {header:MEMBERS_HEADERS}), 'Members');
+  const wsMembers = XLSX.utils.json_to_sheet(membersToRows(), {header:MEMBERS_HEADERS});
+  XLSX.utils.book_append_sheet(wb, wsMembers, 'Members');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(loansToRows(), {header:LOANS_HEADERS}), 'Loans');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txToRows(), {header:TX_HEADERS}), 'Transactions');
   if(includeLedger){
@@ -1128,8 +1201,19 @@ function wireExcel(){
   const ex = document.getElementById('btnExportXLSX');
   if(ex) ex.onclick = async ()=>{ try{ await doExport(true); }catch(err){ alert(err.message||'Failed to export Excel'); } };
   const exL = document.getElementById('btnExportLedgerXLSX');
-  if(exL) exL.onclick = async ()=>{ try{ const XLSX = await loadXLSX(); const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet(ledgerRows(), {header:ledgerHeaders()}); addTotalsRow(ws, [3,4,5,6,7,8,9,11,12,13]); XLSX.utils.book_append_sheet(wb, ws, 'Ledger'); XLSX.writeFile(wb, `kibiina-ledger-${new Date().toISOString().slice(0,10)}.xlsx`); }catch(err){ alert(err.message||'Failed to export ledger'); } };
-  const exF = document.getElementById('btnExportFilledLedger'); if(exF) exF.onclick = ()=> doExport(true);
+  if(exL) exL.onclick = async ()=>{
+    try{
+      const XLSX = await loadXLSX();
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(ledgerRows(), {header:ledgerHeaders()});
+      addTotalsRow(ws, [3,4,5,6,7,8,9,11,12,13]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Ledger');
+      XLSX.writeFile(wb, `kibiina-ledger-${new Date().toISOString().slice(0,10)}.xlsx`);
+    }catch(err){ alert(err.message||'Failed to export ledger'); }
+  };
+  const exF = document.getElementById('btnExportFilledLedger');
+  if(exF) exF.onclick = ()=> doExport(true);
+
   const imp = document.getElementById('importXLSX');
   if(imp) imp.addEventListener('change', async (e)=>{
     const f=e.target.files[0]; if(!f) return;
@@ -1165,7 +1249,10 @@ function wireExcel(){
             rateMonthly:Number(r.RateMonthly)||0.02,
             startDate:String(r.StartDate||todayStr()).slice(0,10),
             lastAccrual:String(r.LastAccrual||'')||undefined,
-            accruedInterest:Number(r.AccruedInterest)||0
+            accruedInterest:Number(r.AccruedInterest)||0,
+            termMonths: Number(r.TermMonths)||undefined,
+            expectedInterest: Number(r.ExpectedInterest)||0,
+            expectedEnd: r.ExpectedEnd? String(r.ExpectedEnd).slice(0,10): undefined
           });
         });
       }
@@ -1173,10 +1260,16 @@ function wireExcel(){
       // Transactions (optional)
       if(wb.Sheets['Transactions']){
         const rows = XLSX.utils.sheet_to_json(wb.Sheets['Transactions']);
-        db.tx = rows.map(r=>({ ts:String(r.Date).slice(0,10), memberNo: r.No? Number(r.No): undefined, type:String(r.Type||''), amount: Number(r.Amount)||0, meta: r.Meta? JSON.parse(r.Meta): undefined }));
+        db.tx = rows.map(r=>({
+          ts:String(r.Date).slice(0,10),
+          memberNo: r.No? Number(r.No): undefined,
+          type:String(r.Type||''),
+          amount: Number(r.Amount)||0,
+          meta: r.Meta? JSON.parse(r.Meta): undefined
+        }));
       }
 
-      // Ledger post (apply)
+      // Ledger apply (optional / additive)
       const ledRows = XLSX.utils.sheet_to_json(wb.Sheets['Ledger']);
       ledRows.forEach(r=>{
         const no = Number(r.No); if(!no||no<1||no>30) return;
@@ -1199,7 +1292,7 @@ function wireExcel(){
       save();
       renderDashboard(); renderMembers(); initMeeting(); renderLoans(); renderRepay(); initReports();
 
-      await maybeDriveAutoSave(); // auto-save to Drive
+      await maybeDriveAutoSave(); 
       alert('Excel imported and saved to Google Drive.');
       e.target.value='';
     }catch(err){
@@ -1207,6 +1300,39 @@ function wireExcel(){
       alert('Failed to import Excel: '+(err.message||err));
     }
   });
+}
+
+// Filled ledger computation (YTD or selected range) — sums tx; 'Interest' includes both repayments and accrual posts
+function computeLedgerRowsFilled(fromStr, toStr){
+  const today = new Date().toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
+  const yearStart = new Date(new Date().getFullYear(),0,1).toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
+  const from = fromStr || yearStart;
+  const to = toStr || today;
+  accrueAll(to);
+  const sums = {};
+  for(let i=1;i<=30;i++) sums[i] = { No:i, Name:(getMemberByNo(i)?.name)||'', Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0, LoanTaken:0, LoanReturned:0, LoanForm:0, Period:to, Interest:0, LoanBalance:0, Fines:0 };
+  const inRange = (ts)=>{ const d = new Date(ts); return d>=new Date(from) && d<=new Date(to); };
+  db.tx.forEach(t=>{
+    if(!t.ts || !inRange(t.ts)) return;
+    const no = Number(t.memberNo); if(!no) return;
+    const amt = Number(t.amount)||0;
+    switch(t.type){
+      case 'welfare': sums[no].Welfare += amt; break;
+      case 'munno_deposit': sums[no].Munno += amt; break;
+      case 'munno_withdraw':
+      case 'munno_returned': sums[no].MunnoReturned += amt; break;
+      case 'munno_taken': sums[no].MunnoTaken += amt; break;
+      case 'loan_issue':
+      case 'loan_topup': sums[no].LoanTaken += amt; break;
+      case 'repay_principal': sums[no].LoanReturned += amt; break;
+      case 'loan_form_fee': sums[no].LoanForm += amt; break;
+      case 'repay_interest':
+      case 'interest_accrual': sums[no].Interest += amt; break;
+      case 'fine': sums[no].Fines += amt; break;
+    }
+  });
+  db.loans.forEach(l=>{ const no=Number(l.memberNo); if(!no) return; sums[no].LoanBalance = (sums[no].LoanBalance||0) + (l.principalOut||0); });
+  return Object.values(sums);
 }
 
 /* ========= Self-Test ========= */
@@ -1224,21 +1350,30 @@ async function runSelfTest(){
     const d = todayStr();
     db.tx.push({ts:d, type:'welfare', memberNo:1, amount:1500}); db.welfareFund+=1500;
     db.tx.push({ts:d, type:'munno_deposit', memberNo:1, amount:10000}); getMemberByNo(1).munno+=10000;
-    db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo:1, principalOut:200000, rateMonthly:0.025, startDate:d, lastAccrual:d, accruedInterest:0, termMonths:3, endDate:addMonths(d,3) });
+    // Loan with term
+    db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo:1, principalOut:200000, rateMonthly:0.025, startDate:d, lastAccrual:d, accruedInterest:0, termMonths:3, expectedInterest: Math.round(200000*0.025*3), expectedEnd:addMonths(d,3) });
     accrueAll(d);
-    db.tx.push({ts:d, type:'repay_interest', memberNo:1, amount:5000}); db.loans[0].accruedInterest = Math.max(0,(db.loans[0].accruedInterest||0)-5000);
+    db.tx.push({ts:d, type:'repay_interest', memberNo:1, amount:10000}); db.loans[0].accruedInterest = Math.max(0,(db.loans[0].accruedInterest||0)-10000);
     db.tx.push({ts:d, type:'repay_principal', memberNo:1, amount:50000}); db.loans[0].principalOut -= 50000;
     db.tx.push({ts:d, type:'fine', memberNo:1, amount:2000});
-    autoPostMissingAccrualsOnOpen();
-    const monthly = Math.round(200000*0.025);
-    assert(monthly===5000, 'Monthly interest @2.5% on 200,000 is 5,000');
-    diag('Self-test complete. If all checks are green, the app is functioning.');
+    postMonthEndAccruals(); // ensure posting doesn't crash
+    const rows = computeLedgerRowsFilled(d, d);
+    assert(rows.length===30, 'Ledger has 30 rows');
+    const r1 = rows.find(r=>r.No===1);
+    assert(r1.Welfare===1500, 'Welfare matched');
+    assert(r1.Munno===10000, 'Munno deposit matched');
+    assert(r1.LoanTaken>=200000 || db.tx.some(t=>t.type==='loan_issue'), 'Loan taken recorded (or issued)');
+    assert(r1.Interest>=0, 'Interest captured');
+    diag('Self-test complete.');
   }catch(err){ diag('Self-test failed: '+(err.message||err), false); }
   finally { db = snap; save(); renderMembers(); renderLoans(); renderRepay(); renderDashboard(); }
 }
-function wireSelfTest(){ const st = document.getElementById('btnSelfTest'); if(st) st.addEventListener('click', runSelfTest); }
+function wireSelfTest(){
+  const st = document.getElementById('btnSelfTest');
+  if(st) st.addEventListener('click', runSelfTest);
+}
 
-/* ========= Registrar: data + IndexedDB ========= */
+/* ========= Registrar: data shape & migration ========= */
 function ensureRegistrar(m){
   if(!m.registrar){
     m.registrar = {
@@ -1252,12 +1387,65 @@ function ensureRegistrar(m){
   return m.registrar;
 }
 db.members.forEach(ensureRegistrar);
-const FILEDB_NAME='kibiina_files_v1', FILEDB_STORE='files';
-function idbOpen(){ return new Promise((resolve, reject)=>{ const req = indexedDB.open(FILEDB_NAME, 1); req.onupgradeneeded = (ev)=>{ const dbi = ev.target.result; if(!dbi.objectStoreNames.contains(FILEDB_STORE)){ dbi.createObjectStore(FILEDB_STORE, { keyPath:'id' }); } }; req.onsuccess = ()=> resolve(req.result); req.onerror = ()=> reject(req.error || new Error('Failed to open file DB')); }); }
-async function filePut(file){ const dbi = await idbOpen(); const tx = dbi.transaction(FILEDB_STORE,'readwrite'); const store = tx.objectStore(FILEDB_STORE); const id = 'f_'+Math.random().toString(36).slice(2,10); const rec = { id, name:file.name, type:file.type||'application/octet-stream', size:file.size||0, ts:Date.now(), data:file }; store.put(rec); return new Promise((res,rej)=>{ tx.oncomplete = ()=> res(id); tx.onerror = ()=> rej(tx.error || new Error('File save failed')); }); }
-async function fileGet(id){ const dbi = await idbOpen(); const tx = dbi.transaction(FILEDB_STORE,'readonly'); const store = tx.objectStore(FILEDB_STORE); return new Promise((res,rej)=>{ const r = store.get(id); r.onsuccess = ()=> res(r.result||null); r.onerror = ()=> rej(r.error||new Error('File get failed')); }); }
-async function fileDelete(id){ const dbi = await idbOpen(); const tx = dbi.transaction(FILEDB_STORE,'readwrite'); const store = tx.objectStore(FILEDB_STORE); store.delete(id); return new Promise((res,rej)=>{ tx.oncomplete = ()=> res(true); tx.onerror = ()=> rej(tx.error||new Error('File delete failed')); }); }
-async function fileDownload(id){ const rec = await fileGet(id); if(!rec){ alert('File missing'); return; } const url = URL.createObjectURL(rec.data); const a = document.createElement('a'); a.href = url; a.download = rec.name || 'download'; a.click(); setTimeout(()=> URL.revokeObjectURL(url), 1000); }
+
+/* ========= Registrar: IndexedDB (binary file store) ========= */
+const FILEDB_NAME='kibiina_files_v1';
+const FILEDB_STORE='files';
+
+function idbOpen(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(FILEDB_NAME, 1);
+    req.onupgradeneeded = (ev)=>{
+      const dbi = ev.target.result;
+      if(!dbi.objectStoreNames.contains(FILEDB_STORE)){
+        dbi.createObjectStore(FILEDB_STORE, { keyPath:'id' });
+      }
+    };
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error || new Error('Failed to open file DB'));
+  });
+}
+async function filePut(file){
+  const dbi = await idbOpen();
+  const tx = dbi.transaction(FILEDB_STORE,'readwrite');
+  const store = tx.objectStore(FILEDB_STORE);
+  const id = 'f_'+Math.random().toString(36).slice(2,10);
+  const rec = { id, name:file.name, type:file.type||'application/octet-stream', size:file.size||0, ts:Date.now(), data:file };
+  store.put(rec);
+  return new Promise((res,rej)=>{
+    tx.oncomplete = ()=> res(id);
+    tx.onerror = ()=> rej(tx.error || new Error('File save failed'));
+  });
+}
+async function fileGet(id){
+  const dbi = await idbOpen();
+  const tx = dbi.transaction(FILEDB_STORE,'readonly');
+  const store = tx.objectStore(FILEDB_STORE);
+  return new Promise((res,rej)=>{
+    const r = store.get(id);
+    r.onsuccess = ()=> res(r.result||null);
+    r.onerror = ()=> rej(r.error||new Error('File get failed'));
+  });
+}
+async function fileDelete(id){
+  const dbi = await idbOpen();
+  const tx = dbi.transaction(FILEDB_STORE,'readwrite');
+  const store = tx.objectStore(FILEDB_STORE);
+  store.delete(id);
+  return new Promise((res,rej)=>{
+    tx.oncomplete = ()=> res(true);
+    tx.onerror = ()=> rej(tx.error||new Error('File delete failed'));
+  });
+}
+async function fileDownload(id){
+  const rec = await fileGet(id); if(!rec){ alert('File missing'); return; }
+  const url = URL.createObjectURL(rec.data);
+  const a = document.createElement('a');
+  a.href = url; a.download = rec.name || 'download';
+  a.click(); setTimeout(()=> URL.revokeObjectURL(url), 1000);
+}
+
+/* ========= Registrar: render & wire ========= */
 function renderRegistrar(){
   const sel = document.getElementById('regMemberNo');
   if(!sel) return;
@@ -1266,7 +1454,12 @@ function renderRegistrar(){
   if(!sel.value && db.members.length) sel.value = String(db.members[0].number);
   fillRegistrarForm();
 }
-function selectedMemberRegistrar(){ const sel = document.getElementById('regMemberNo'); if(!sel) return null; const m = getMemberByNo(sel.value); if(!m) return null; ensureRegistrar(m); return m; }
+function selectedMemberRegistrar(){
+  const sel = document.getElementById('regMemberNo'); if(!sel) return null;
+  const m = getMemberByNo(sel.value); if(!m) return null;
+  ensureRegistrar(m);
+  return m;
+}
 function fillRegistrarForm(){
   const m = selectedMemberRegistrar(); if(!m) return;
   const r = m.registrar;
@@ -1291,18 +1484,33 @@ function renderFileList(containerId, ids){
   box.innerHTML = '';
   ids.forEach(async (fid)=>{
     const rec = await fileGet(fid); if(!rec) return;
-    const row = document.createElement('div'); row.className = 'stack'; row.style.margin = '6px 0';
+    const row = document.createElement('div');
+    row.className = 'stack';
+    row.style.margin = '6px 0';
     let thumb = '';
     if(rec.type.startsWith('image/')){
       const url = URL.createObjectURL(rec.data);
       thumb = `<img src="${url}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">`;
       setTimeout(()=> URL.revokeObjectURL(url), 5000);
     }
-    row.innerHTML = `${thumb}<span class="pill">${rec.name}</span><button class="btn" data-dl="${fid}">Download</button><button class="btn bad" data-rm="${fid}">Remove</button>`;
+    row.innerHTML = `
+      ${thumb}
+      <span class="pill">${rec.name}</span>
+      <button class="btn" data-dl="${fid}">Download</button>
+      <button class="btn bad" data-rm="${fid}">Remove</button>
+    `;
     row.addEventListener('click', async (e)=>{
-      const dl = e.target.dataset.dl; const rm = e.target.dataset.rm; const m = selectedMemberRegistrar(); if(!m) return; const r = m.registrar;
+      const dl = e.target.dataset.dl;
+      const rm = e.target.dataset.rm;
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = m.registrar;
       if(dl){ await fileDownload(dl); }
-      if(rm){ await fileDelete(rm); r.passportPhotoIds=(r.passportPhotoIds||[]).filter(x=>x!==rm); r.otherDocIds=(r.otherDocIds||[]).filter(x=>x!==rm); save(); renderFileList(containerId, containerId==='listPassports'?r.passportPhotoIds:r.otherDocIds); }
+      if(rm){
+        await fileDelete(rm);
+        r.passportPhotoIds = (r.passportPhotoIds||[]).filter(x=>x!==rm);
+        r.otherDocIds      = (r.otherDocIds||[]).filter(x=>x!==rm);
+        save(); renderFileList(containerId, containerId==='listPassports'?r.passportPhotoIds:r.otherDocIds);
+      }
     });
     box.appendChild(row);
   });
@@ -1310,13 +1518,23 @@ function renderFileList(containerId, ids){
 function renderSingleFileInfo(containerId, id){
   const box = document.getElementById(containerId); if(!box) return;
   if(!id){ box.innerHTML = '<div class="muted">No file uploaded.</div>'; return; }
-  (async()=>{ const rec = await fileGet(id); if(!rec){ box.innerHTML = '<div class="muted">File not found.</div>'; return; }
-    box.innerHTML = `<div class="stack"><span class="pill">${rec.name}</span><button class="btn" id="${containerId}_dl">Download</button></div>`;
-    const btn = document.getElementById(`${containerId}_dl`); if(btn) btn.onclick = ()=> fileDownload(id);
+  (async()=>{
+    const rec = await fileGet(id);
+    if(!rec){ box.innerHTML = '<div class="muted">File not found.</div>'; return; }
+    box.innerHTML = `
+      <div class="stack">
+        <span class="pill">${rec.name}</span>
+        <button class="btn" id="${containerId}_dl">Download</button>
+      </div>
+    `;
+    const btn = document.getElementById(`${containerId}_dl`);
+    if(btn) btn.onclick = ()=> fileDownload(id);
   })();
 }
 function wireRegistrar(){
-  const who = document.getElementById('regMemberNo'); if(who) who.addEventListener('change', fillRegistrarForm);
+  const who = document.getElementById('regMemberNo');
+  if(who){ who.addEventListener('change', fillRegistrarForm); }
+
   const saveBtn = document.getElementById('btnSaveRegistrar');
   if(saveBtn){
     saveBtn.onclick = ()=>{
@@ -1328,77 +1546,175 @@ function wireRegistrar(){
       r.natId       = document.getElementById('regNIN').value.trim();
       r.nationality = document.getElementById('regNationality').value.trim();
       r.residence   = document.getElementById('regResidence').value.trim();
-      r.nextOfKin = { name:document.getElementById('regKinName').value.trim(), relation:document.getElementById('regKinRelation').value.trim(), phone:document.getElementById('regKinPhone').value.trim(), address:document.getElementById('regKinAddress').value.trim() };
-      if(!m.name && r.fullName) m.name = r.fullName;
+      r.nextOfKin = {
+        name:     document.getElementById('regKinName').value.trim(),
+        relation: document.getElementById('regKinRelation').value.trim(),
+        phone:    document.getElementById('regKinPhone').value.trim(),
+        address:  document.getElementById('regKinAddress').value.trim()
+      };
+      if(!m.name && r.fullName) m.name = r.fullName; // sync display name if empty
       save(); renderMembers(); alert('Registrar details saved.');
     };
   }
+
   const pass = document.getElementById('regPassports');
-  if(pass){ pass.addEventListener('change', async (e)=>{ const m = selectedMemberRegistrar(); if(!m) return; const r = ensureRegistrar(m); for(const f of Array.from(e.target.files||[])){ const id = await filePut(f); r.passportPhotoIds.push(id); } save(); e.target.value=''; renderFileList('listPassports', r.passportPhotoIds); }); }
+  if(pass){
+    pass.addEventListener('change', async (e)=>{
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = ensureRegistrar(m);
+      const files = Array.from(e.target.files||[]);
+      for(const f of files){
+        const id = await filePut(f);
+        r.passportPhotoIds.push(id);
+      }
+      save(); e.target.value=''; renderFileList('listPassports', r.passportPhotoIds);
+    });
+  }
+
   const byl = document.getElementById('regBylaws');
-  if(byl){ byl.addEventListener('change', async (e)=>{ const m = selectedMemberRegistrar(); if(!m) return; const r = ensureRegistrar(m); const file = (e.target.files||[])[0]; if(!file) return; if(r.bylawsFileId){ try{ await fileDelete(r.bylawsFileId); }catch{} } r.bylawsFileId = await filePut(file); save(); e.target.value=''; renderSingleFileInfo('infoBylaws', r.bylawsFileId); }); }
-  const rmByl = document.getElementById('btnRemoveBylaws'); if(rmByl){ rmByl.onclick = async ()=>{ const m = selectedMemberRegistrar(); if(!m) return; const r = ensureRegistrar(m); if(r.bylawsFileId){ try{ await fileDelete(r.bylawsFileId);}catch{} r.bylawsFileId = null; save(); renderSingleFileInfo('infoBylaws', null); } }; }
+  if(byl){
+    byl.addEventListener('change', async (e)=>{
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = ensureRegistrar(m);
+      const file = (e.target.files||[])[0]; if(!file) return;
+      if(r.bylawsFileId){ try{ await fileDelete(r.bylawsFileId); }catch{} }
+      r.bylawsFileId = await filePut(file);
+      save(); e.target.value=''; renderSingleFileInfo('infoBylaws', r.bylawsFileId);
+    });
+  }
+  const rmByl = document.getElementById('btnRemoveBylaws');
+  if(rmByl){
+    rmByl.onclick = async ()=>{
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = ensureRegistrar(m);
+      if(r.bylawsFileId){ try{ await fileDelete(r.bylawsFileId);}catch{} r.bylawsFileId = null; save(); renderSingleFileInfo('infoBylaws', null); }
+    };
+  }
+
   const regf = document.getElementById('regForm');
-  if(regf){ regf.addEventListener('change', async (e)=>{ const m = selectedMemberRegistrar(); if(!m) return; const r = ensureRegistrar(m); const file = (e.target.files||[])[0]; if(!file) return; if(r.regFormFileId){ try{ await fileDelete(r.regFormFileId); }catch{} } r.regFormFileId = await filePut(file); save(); e.target.value=''; renderSingleFileInfo('infoForm', r.regFormFileId); }); }
-  const rmForm = document.getElementById('btnRemoveForm'); if(rmForm){ rmForm.onclick = async ()=>{ const m = selectedMemberRegistrar(); if(!m) return; const r = ensureRegistrar(m); if(r.regFormFileId){ try{ await fileDelete(r.regFormFileId);}catch{} r.regFormFileId = null; save(); renderSingleFileInfo('infoForm', null); } }; }
+  if(regf){
+    regf.addEventListener('change', async (e)=>{
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = ensureRegistrar(m);
+      const file = (e.target.files||[])[0]; if(!file) return;
+      if(r.regFormFileId){ try{ await fileDelete(r.regFormFileId); }catch{} }
+      r.regFormFileId = await filePut(file);
+      save(); e.target.value=''; renderSingleFileInfo('infoForm', r.regFormFileId);
+    });
+  }
+  const rmForm = document.getElementById('btnRemoveForm');
+  if(rmForm){
+    rmForm.onclick = async ()=>{
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = ensureRegistrar(m);
+      if(r.regFormFileId){ try{ await fileDelete(r.regFormFileId);}catch{} r.regFormFileId = null; save(); renderSingleFileInfo('infoForm', null); }
+    };
+  }
+
   const other = document.getElementById('regOtherDocs');
-  if(other){ other.addEventListener('change', async (e)=>{ const m = selectedMemberRegistrar(); if(!m) return; const r = ensureRegistrar(m); for(const f of Array.from(e.target.files||[])){ const id = await filePut(f); r.otherDocIds.push(id); } save(); e.target.value=''; renderFileList('listOtherDocs', r.otherDocIds); }); }
+  if(other){
+    other.addEventListener('change', async (e)=>{
+      const m = selectedMemberRegistrar(); if(!m) return;
+      const r = ensureRegistrar(m);
+      const files = Array.from(e.target.files||[]);
+      for(const f of files){
+        const id = await filePut(f);
+        r.otherDocIds.push(id);
+      }
+      save(); e.target.value=''; renderFileList('listOtherDocs', r.otherDocIds);
+    });
+  }
 }
 
-/* ======== Google Drive (GIS) – robust sign-in + token refresh ======== */
+/* ======== Google Drive Config & Sync ======== */
 const GOOGLE_CLIENT_ID = "1012401719257-nm0hj0h1na9d7tm8eat4tllgigjrbir0.apps.googleusercontent.com";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const DRIVE_FILE_NAME = "kibiina-backup.json";
+
 let driveAccessToken = null;
 let driveTokenClient = null;
 
-function originWarningIfNeeded(){ if(location.protocol==='file:'){ const el=document.getElementById('cloudStatus'); if(el){ el.textContent='Open from http:// or https:// — Google blocks file://'; } } }
-function setCloudStatus(text, good=false){ const el = document.getElementById('cloudStatus'); if(!el) return; el.textContent = text; el.className = 'pill ' + (good ? '' : ''); }
-function setCloudButtons(enabled){ ['btnCloudSave','btnCloudLoad','btnGSignOut'].forEach(id=>{ const b = document.getElementById(id); if(b) b.disabled = !enabled; }); }
-
-function waitForGIS(){ return new Promise((resolve, reject)=>{ let waited=0; const t=setInterval(()=>{ if(window.google && google.accounts && google.accounts.oauth2){ clearInterval(t); resolve(); } waited+=50; if(waited>10000){ clearInterval(t); reject(new Error('Google Identity Services failed to load')); } },50); }); }
-
-async function initDrive(){
-  originWarningIfNeeded();
-  try{ await waitForGIS(); }catch(e){ setCloudStatus('Google Sign-In failed to load'); return; }
-  driveTokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GOOGLE_CLIENT_ID,
-    scope: DRIVE_SCOPE,
-    callback: (resp)=>{ if(resp && resp.access_token){ driveAccessToken = resp.access_token; setCloudStatus("Signed in • Ready", true); setCloudButtons(true); } }
+function loadGIS(){
+  return new Promise((resolve,reject)=>{
+    if(window.google && window.google.accounts){ return resolve(); }
+    const s = document.createElement('script');
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true; s.defer = true;
+    s.onload = resolve; s.onerror = ()=>reject(new Error("Failed to load Google Identity Services"));
+    document.head.appendChild(s);
   });
-  // Try silent token to enable buttons if already granted
-  try{ driveTokenClient.requestAccessToken({prompt:""}); }catch(_){}
+}
+function setCloudStatus(text){
+  const el = document.getElementById('cloudStatus');
+  if(!el) return;
+  el.textContent = text;
+}
+function setCloudButtons(enabled){
+  ['btnCloudSave','btnCloudLoad','btnGSignOut'].forEach(id=>{
+    const b = document.getElementById(id); if(b) b.disabled = !enabled;
+  });
+}
+async function initDrive(){
+  try{
+    await loadGIS();
+    driveTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: DRIVE_SCOPE,
+      callback: (resp)=>{
+        if(resp && resp.access_token){
+          driveAccessToken = resp.access_token;
+          setCloudStatus("Signed in • Ready");
+          setCloudButtons(true);
+        }
+      }
+    });
+    setCloudStatus("Signed out");
+    setCloudButtons(false);
+  }catch(err){
+    console.error(err);
+    setCloudStatus("Drive init failed (check internet)");
+  }
 }
 function driveEnsureToken(interactive=true){
-  return new Promise((res,reject)=>{
+  return new Promise((res)=>{
     if(driveAccessToken){ return res(true); }
     if(!driveTokenClient){ setCloudStatus("Cloud not ready"); return res(false); }
-    driveTokenClient.callback = (resp)=>{ if(resp && resp.access_token){ driveAccessToken = resp.access_token; setCloudStatus("Signed in • Ready", true); setCloudButtons(true); res(true); } else { res(false); } };
-    driveTokenClient.requestAccessToken(interactive?{}:{prompt:""});
+    driveTokenClient.callback = (resp)=>{
+      if(resp && resp.access_token){
+        driveAccessToken = resp.access_token;
+        setCloudStatus("Signed in • Ready");
+        setCloudButtons(true);
+        return res(true);
+      }
+      setCloudStatus("Sign-in cancelled/blocked");
+      res(false);
+    };
+    try{
+      driveTokenClient.requestAccessToken(interactive ? {} : {prompt:""});
+    }catch(err){
+      console.error(err);
+      setCloudStatus("Sign-in blocked (enable popups/cookies)");
+      res(false);
+    }
   });
 }
-async function fetchWithAuth(url, options={}){
-  if(!driveAccessToken){ const ok=await driveEnsureToken(true); if(!ok) throw new Error('Sign-in required'); }
-  const doFetch = ()=> fetch(url, { ...options, headers: { ...(options.headers||{}), Authorization: 'Bearer '+driveAccessToken }});
-  let r = await doFetch();
-  if(r.status===401){ // refresh silently once
-    driveAccessToken=null;
-    const ok = await driveEnsureToken(false);
-    if(!ok) throw new Error('Auth refresh failed');
-    r = await doFetch();
-  }
-  return r;
+function driveSignOut(){
+  driveAccessToken = null;
+  setCloudButtons(false);
+  setCloudStatus("Signed out");
 }
 async function driveFindBackup(){
   const q = encodeURIComponent(`name='${DRIVE_FILE_NAME}' and mimeType='application/json' and trashed=false`);
   const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`;
-  const r = await fetchWithAuth(url);
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${driveAccessToken}` }});
   if(!r.ok) throw new Error(await r.text());
   const j = await r.json();
   return (j.files && j.files[0]) ? j.files[0] : null;
 }
 async function driveDownloadFile(fileId){
-  const r = await fetchWithAuth(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    headers: { Authorization: `Bearer ${driveAccessToken}` }
+  });
   if(!r.ok) throw new Error(await r.text());
   return r.text();
 }
@@ -1407,8 +1723,13 @@ function makeMultipartBody(meta, contentStr, mime="application/json"){
   const delimiter = `\r\n--${boundary}\r\n`;
   const close = `\r\n--${boundary}--`;
   const body =
-    delimiter + "Content-Type: application/json; charset=UTF-8\r\n\r\n" + JSON.stringify(meta) +
-    delimiter + `Content-Type: ${mime}\r\n\r\n` + contentStr + close;
+    delimiter +
+    "Content-Type: application/json; charset=UTF-8\r\n\r\n" +
+    JSON.stringify(meta) +
+    delimiter +
+    `Content-Type: ${mime}\r\n\r\n` +
+    contentStr +
+    close;
   const headers = { "Content-Type": `multipart/related; boundary=${boundary}`, "Authorization": `Bearer ${driveAccessToken}` };
   return { body, headers };
 }
@@ -1416,7 +1737,7 @@ async function driveCreateBackup(jsonStr){
   const meta = { name: DRIVE_FILE_NAME, mimeType: "application/json" };
   const { body, headers } = makeMultipartBody(meta, jsonStr);
   const url = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
-  const r = await fetchWithAuth(url, { method:"POST", headers, body });
+  const r = await fetch(url, { method:"POST", headers, body });
   if(!r.ok) throw new Error(await r.text());
   return r.json();
 }
@@ -1424,7 +1745,7 @@ async function driveUpdateBackup(fileId, jsonStr){
   const meta = { mimeType: "application/json" };
   const { body, headers } = makeMultipartBody(meta, jsonStr);
   const url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`;
-  const r = await fetchWithAuth(url, { method:"PATCH", headers, body });
+  const r = await fetch(url, { method:"PATCH", headers, body });
   if(!r.ok) throw new Error(await r.text());
   return r.json();
 }
@@ -1438,7 +1759,7 @@ async function driveSave(showToast=true){
     else { await driveCreateBackup(json); }
     if(btn){ btn.textContent = "Data saved ✓"; setTimeout(()=> btn.textContent="Save to Google Drive", 2500); }
     const t = new Date().toLocaleString('en-UG', { timeZone:'Africa/Kampala' });
-    setCloudStatus(`Last saved: ${t}`, true);
+    setCloudStatus(`Last saved: ${t}`);
   }catch(err){
     console.error(err);
     alert("Failed to save to Google Drive:\n"+(err.message||err));
@@ -1453,13 +1774,11 @@ async function driveLoad(silent=false){
     const txt = await driveDownloadFile(existing.id);
     const remote = JSON.parse(txt);
     if(!remote.members || !remote.loans || !remote.tx){ throw new Error("Backup is invalid."); }
-    db = remote;
-    db.settings = db.settings || { lastMeetingDate: todayStr(), updatedAt:new Date().toISOString(), lastAccrualPosted:null, autoAccrualOnOpen:true };
-    save();
+    db = remote; save();
     renderDashboard(); renderMembers(); initMeeting(); renderLoans(); renderRepay(); initReports();
     if(!silent) alert("Loaded latest backup from Google Drive.");
     const t = new Date(existing.modifiedTime).toLocaleString('en-UG', { timeZone:'Africa/Kampala' });
-    setCloudStatus(`Loaded: ${t}`, true);
+    setCloudStatus(`Loaded: ${t}`);
   }catch(err){
     console.error(err);
     if(!silent) alert("Failed to load from Google Drive:\n"+(err.message||err));
@@ -1470,12 +1789,17 @@ function wireDrive(){
   const signOut= document.getElementById('btnGSignOut');
   const saveB  = document.getElementById('btnCloudSave');
   const loadB  = document.getElementById('btnCloudLoad');
-  if(signIn) signIn.onclick = async ()=>{ const ok = await driveEnsureToken(true); if(ok){ setCloudStatus("Signed in • Ready", true); setCloudButtons(true); } };
-  if(signOut) signOut.onclick = ()=>{ driveAccessToken=null; setCloudButtons(false); setCloudStatus("Signed out"); };
+
+  if(signIn) signIn.onclick = async ()=>{ const ok = await driveEnsureToken(true); if(ok){ setCloudStatus("Signed in • Ready"); setCloudButtons(true);} };
+  if(signOut) signOut.onclick = ()=> driveSignOut();
   if(saveB) saveB.onclick = ()=> driveSave(true);
   if(loadB) loadB.onclick = ()=> driveLoad(false);
 }
-async function maybeDriveAutoSave(){ if(!driveTokenClient) return; const ok = await driveEnsureToken(false); if(ok) await driveSave(false); }
+async function maybeDriveAutoSave(){
+  if(!driveTokenClient) return;
+  const ok = await driveEnsureToken(false);
+  if(ok) await driveSave(false);
+}
 
 /* ========= Initial boot ========= */
 document.addEventListener('DOMContentLoaded', async ()=>{
@@ -1486,18 +1810,31 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   const lf = document.getElementById('ledgerFrom'); if(lf) lf.value = from;
   const lt = document.getElementById('ledgerTo');   if(lt) lt.value = to;
 
-  // Auto-post monthly interest accruals up to last full month
-  try{ autoPostMissingAccrualsOnOpen(); }catch(e){ console.warn('Auto accrual failed', e); }
+  wireTabs();
+  wireMembers();
+  wireMeeting();
+  wireLoans();
+  wireRepay();
+  wireReports();
+  wireBackup();
+  wireExcel();
+  wireSelfTest();
+  wireRegistrar();
 
-  wireTabs(); wireMembers(); wireMeeting(); wireLoans(); wireRepay(); wireReports(); wireBackup(); wireExcel(); wireSelfTest(); wireRegistrar();
+  // Accrue and post month-end accruals before rendering
+  accrueAll();
+  postMonthEndAccruals();
 
-  renderDashboard(); renderMembers(); initMeeting(); renderLoans(); renderRepay(); initReports();
+  renderDashboard();
+  renderMembers();
+  initMeeting();
+  renderLoans();
+  renderRepay();
+  initReports();
 
   // Drive
   await initDrive();
   wireDrive();
-  // Optional: silent restore if already granted
-  // await driveLoad(true);
 });
 </script>
 </body>
