@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KIBIINA – Savings & Loans (Complete v4)</title>
-<meta name="description" content="Kibiina saving group app: members 1–30, registrar with docs, loans with terms & expected interest, automatic accrual, Excel/ledger import/export (with Shares column), Google Drive backup, detailed reports & print.">
+<title>KIBIINA – Savings & Loans (Full App)</title>
+<meta name="description" content="Kibiina saving group app: numbered members 1–30, unlimited shares, registrar with docs, loans by months, expected interest, meeting, reports, Excel, Google Drive backup, duplicate-date protection.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -19,7 +19,7 @@
   .tabs{display:flex;flex-wrap:wrap;gap:8px}
   .tab{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:700}
   .tab.active{background:var(--brand);border-color:var(--brand);color:#fff}
-  main{padding:16px;max-width:1200px;margin:0 auto}
+  main{padding:16px;max-width:1220px;margin:0 auto}
   h2{margin:.2rem 0 1rem}
   .row{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
   .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px}
@@ -51,8 +51,12 @@
   .goodmsg{background:#ecfdf5;border:1px solid #86efac;color:#065f46;padding:8px;border-radius:10px}
   .mono{font-family: ui-monospace, Menlo, Consolas, "Courier New", monospace; white-space: pre-wrap;}
   img{max-width:100%}
-  .file-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 8px}
-  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:.5rem 0}
+  .section-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  @media print {
+    header, .tabs, .section-tools, .btn { display:none !important; }
+    main{max-width:none}
+    .card{border:0}
+  }
 </style>
 </head>
 <body>
@@ -75,9 +79,6 @@
   <main>
     <!-- DASHBOARD -->
     <section id="dashboard" class="tabpanel">
-      <div class="toolbar">
-        <button class="btn" id="btnSaveNow">💾 Save now</button>
-      </div>
       <h2>Group Overview</h2>
       <div class="grid-4">
         <div class="stat"><span class="muted">Members</span><b id="statMembers">0</b></div>
@@ -86,10 +87,10 @@
         <div class="stat"><span class="muted">Interest Collected (YTD)</span><b id="statInterestYTD">UGX 0</b></div>
       </div>
       <div class="grid-4" style="margin-top:8px">
-        <div class="stat"><span class="muted">Expected Interest to Collect (All active loans)</span><b id="statExpectedInterest">UGX 0</b></div>
-        <div class="stat"><span class="muted">Accrued Interest O/S (All loans)</span><b id="statAccruedOS">UGX 0</b></div>
+        <div class="stat"><span class="muted">Expected Interest (Remaining)</span><b id="statIntRemain">UGX 0</b></div>
+        <div class="stat"><span class="muted">Accrued Interest (All loans)</span><b id="statAccrued">UGX 0</b></div>
         <div class="stat"><span class="muted">Welfare Fund</span><b id="fundWelfare">UGX 0</b></div>
-        <div class="stat"><span class="muted">Munno (aggregate)</span><b id="fundMunno">UGX 0</b></div>
+        <div class="stat"><span class="muted">Munno (Aggregate)</span><b id="fundMunno">UGX 0</b></div>
       </div>
       <div class="hr"></div>
       <div class="grid-2">
@@ -97,19 +98,18 @@
           <h3>Quick Actions</h3>
           <div class="stack">
             <button class="btn primary" id="btnCreate30">Create numbered members 1–30</button>
-            <button class="btn" id="btnTodaySunday">Set meeting date to next Sunday</button>
+            <button class="btn" id="btnTodaySunday">Next Sunday</button>
             <button class="btn" id="btnBackup">Export data (JSON)</button>
             <label class="btn"><input type="file" id="restoreFile" accept="application/json" style="display:none">Import data</label>
+            <button class="btn" id="btnSaveNow">Save</button>
           </div>
-          <p class="help">All data saves to this browser (localStorage). Use export/import for backup or moving devices.</p>
+          <p class="help">All data saves locally (browser). Use export/import and Cloud Sync for backups.</p>
         </div>
         <div class="card">
-          <h3>Tips</h3>
-          <ul class="help" style="margin:0 0 0 16px">
-            <li>Loans now include <b>Term (months)</b> and show <b>Expected Interest</b> immediately.</li>
-            <li>Month-end <b>interest_accrual</b> entries auto-post when the app opens.</li>
-            <li>Reports & statements include <b>Print</b> buttons.</li>
-          </ul>
+          <h3>Print & Tools</h3>
+          <div class="stack section-tools">
+            <button class="btn" id="btnPrintDash">Print dashboard</button>
+          </div>
         </div>
       </div>
     </section>
@@ -135,8 +135,8 @@
           </div>
           <div class="grid-3" style="margin-top:8px">
             <div>
-              <label>Shares (0–10)</label>
-              <input id="mShares" type="number" min="0" max="10" step="1" value="0">
+              <label>Shares (0+)</label>
+              <input id="mShares" type="number" min="0" step="1" value="0">
             </div>
             <div>
               <label>Munno Balance (UGX)</label>
@@ -149,7 +149,7 @@
               </div>
             </div>
           </div>
-          <p class="help">Each member is identified by a <b>unique number (1–30)</b>. Names are for display only.</p>
+          <p class="help">Each member is identified by a <b>number 1–30</b>. Shares are unlimited.</p>
         </div>
         <div class="card" style="grid-column: span 8;">
           <h3>Member List</h3>
@@ -203,28 +203,25 @@
             <input type="text" id="regResidence" placeholder="Village / Parish / Subcounty">
           </div>
           <div>
-            <label>Tribe</label>
-            <input type="text" id="regTribe" placeholder="e.g., Baganda">
+            <label>Next of Kin – Full Name</label>
+            <input type="text" id="regKinName" placeholder="e.g., John S. Kato">
           </div>
           <div>
-            <label>Date of Birth</label>
-            <input type="date" id="regDOB">
+            <label>Next of Kin – Relation</label>
+            <input type="text" id="regKinRelation" placeholder="e.g., Brother">
           </div>
         </div>
 
         <div class="grid-3" style="margin-top:8px">
           <div>
-            <label>Age</label>
-            <input type="number" id="regAge" min="0" step="1" placeholder="e.g., 32">
+            <label>Next of Kin – Phone</label>
+            <input type="tel" id="regKinPhone" placeholder="+2567...">
           </div>
           <div>
-            <label>Application form fully filled?</label>
-            <select id="regFormFilled">
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
+            <label>Next of Kin – Address</label>
+            <input type="text" id="regKinAddress" placeholder="Village / Parish / Subcounty">
           </div>
-          <div style="align-self:end">
+          <div style="align-self:end" class="right">
             <button class="btn primary" id="btnSaveRegistrar">Save Registrar Details</button>
           </div>
         </div>
@@ -233,16 +230,16 @@
       <div class="row" style="margin-top:12px">
         <div class="card" style="grid-column: span 6;">
           <h3>Passport Photos (multiple)</h3>
-          <div class="stack">
+          <div class="stack section-tools">
             <label class="btn"><input type="file" id="regPassports" accept="image/*" multiple style="display:none">Upload Photos</label>
           </div>
           <div id="listPassports" style="margin-top:8px"></div>
-          <p class="help">Stored locally in this browser (IndexedDB).</p>
+          <p class="help">Stored locally (browser).</p>
         </div>
 
         <div class="card" style="grid-column: span 6;">
           <h3>Signed Group By-Laws (PDF/Image)</h3>
-          <div class="stack">
+          <div class="stack section-tools">
             <label class="btn"><input type="file" id="regBylaws" accept="application/pdf,image/*" style="display:none">Upload File</label>
             <button class="btn bad" id="btnRemoveBylaws">Remove</button>
           </div>
@@ -253,7 +250,7 @@
       <div class="row" style="margin-top:12px">
         <div class="card" style="grid-column: span 6;">
           <h3>Fully Filled Registration Form (PDF/Image)</h3>
-          <div class="stack">
+          <div class="stack section-tools">
             <label class="btn"><input type="file" id="regForm" accept="application/pdf,image/*" style="display:none">Upload File</label>
             <button class="btn bad" id="btnRemoveForm">Remove</button>
           </div>
@@ -262,21 +259,21 @@
 
         <div class="card" style="grid-column: span 6;">
           <h3>Other Scanned Documents (multiple)</h3>
-          <div class="stack">
+          <div class="stack section-tools">
             <label class="btn"><input type="file" id="regOtherDocs" accept="application/pdf,image/*" multiple style="display:none">Upload Files</label>
           </div>
           <div id="listOtherDocs" style="margin-top:8px"></div>
         </div>
       </div>
-      <p class="help" style="margin-top:8px">
-        Tip: Export JSON frequently and/or enable Google Drive backup in the Data tab.
-      </p>
     </section>
 
     <!-- MEETING -->
     <section id="meeting" class="tabpanel" hidden>
       <div class="card">
-        <h3>Sunday Meeting Entry</h3>
+        <div class="section-tools">
+          <h3 style="margin-right:auto">Sunday Meeting Entry</h3>
+          <button class="btn" id="btnPrintMeeting">Print</button>
+        </div>
         <div class="grid-3">
           <div>
             <label>Meeting (Sunday) Date</label>
@@ -294,9 +291,8 @@
         <div id="meetingSheet"></div>
         <div class="right" style="margin-top:10px">
           <button class="btn ok" id="btnPostMeeting" disabled>Post Meeting</button>
-          <button class="btn" id="btnPrintMeeting" disabled>Print Sheet</button>
         </div>
-        <p class="help">Munno (any amount), welfare (UGX 1,500 default), and buy shares (max 10 total shares per member).</p>
+        <p class="help">Munno (any amount), welfare (UGX 1,500 default), and buy shares (any positive number). Duplicate same-date meeting posts are blocked.</p>
       </div>
     </section>
 
@@ -310,50 +306,35 @@
           <div class="grid-3" style="margin-top:8px">
             <div>
               <label>Amount (UGX)</label>
-              <input type="number" id="loanAmt" min="1" step="1">
+              <input type="number" id="loanAmt" min="0" step="1">
             </div>
             <div>
-              <label>Term (months)</label>
-              <input type="number" id="loanTerm" min="1" step="1" value="1">
+              <label>Months (term)</label>
+              <input type="number" id="loanMonths" min="1" step="1" value="1">
             </div>
             <div>
               <label>Start Date</label>
               <input type="date" id="loanDate">
             </div>
           </div>
-          <div class="grid-3" style="margin-top:8px">
-            <div>
-              <label>Monthly Rate (auto)</label>
-              <input type="text" id="loanRate" disabled value="auto (2.5%/2%)">
-            </div>
-            <div>
-              <label>Expected Interest (total)</label>
-              <input type="text" id="loanExpected" disabled value="UGX 0">
-            </div>
-            <div>
-              <label>Expected Due Date</label>
-              <input type="text" id="loanDue" disabled value="-">
-            </div>
+          <div class="stat" style="margin-top:8px">
+            <span class="muted">Preview</span>
+            <b id="loanPreview">Rate auto (2.5%/2%), expected interest UGX 0</b>
           </div>
           <div id="loanHint" class="help" style="margin-top:6px"></div>
           <div class="stack" style="margin-top:10px">
-            <button class="btn primary" id="btnIssueLoan">Issue Loan</button>
-            <button class="btn" id="btnSaveAfterLoan">💾 Save</button>
+            <button class="btn primary" id="btnIssueLoan">Record Loan (Save)</button>
           </div>
         </div>
         <div class="card">
           <h3>Active Loans</h3>
           <table class="table" id="loansTable">
             <thead>
-              <tr>
-                <th>No.</th><th>Name</th>
-                <th>Principal O/S</th><th>Accrued Interest</th><th>Rate</th>
-                <th>Term</th><th>Expected Interest</th><th>Interest Remaining</th><th>Since</th>
-              </tr>
+              <tr><th>No.</th><th>Name</th><th>Principal O/S</th><th>Accrued</th><th>Exp. Interest</th><th>Interest Rem.</th><th>Rate</th><th>Since</th></tr>
             </thead>
             <tbody></tbody>
           </table>
-          <p class="help">Limit: up to <b>2× share capital</b>. Rate: <b>2.5%/month</b> for UGX 1–3,999,000; otherwise <b>2%/month</b>. Expected interest is <b>principal × rate × months</b>.</p>
+          <p class="help">Limit: <b>2× share capital</b>. Rates: <b>2.5%/mo</b> for UGX 1–3,999,999; <b>2%/mo</b> for ≥ UGX 4,000,000. Expected interest = principal × monthly rate × months.</p>
         </div>
       </div>
     </section>
@@ -368,7 +349,7 @@
           <div class="grid-3" style="margin-top:8px">
             <div>
               <label>Amount (UGX)</label>
-              <input type="number" id="rpAmt" min="1" step="1">
+              <input type="number" id="rpAmt" min="0" step="1">
             </div>
             <div>
               <label>Date</label>
@@ -384,15 +365,17 @@
             </div>
           </div>
           <div class="stack" style="margin-top:10px">
-            <button class="btn ok" id="btnPostRepay">Post Repayment</button>
-            <button class="btn" id="btnSaveAfterRepay">💾 Save</button>
+            <button class="btn ok" id="btnPostRepay">Post Repayment (Save)</button>
           </div>
-          <p class="help">Shows new balances after posting. “Recent Transactions” uses the exact date you choose.</p>
+          <p class="help" id="rpResult"></p>
         </div>
         <div class="card">
-          <h3>Recent Transactions</h3>
+          <div class="section-tools">
+            <h3 style="margin-right:auto">Recent Transactions</h3>
+            <button class="btn" id="btnTxPrint">Print</button>
+          </div>
           <table class="table" id="txTable">
-            <thead><tr><th>Date</th><th>No.</th><th>Name</th><th>Type</th><th>Amount</th><th>Principal Bal</th><th>Interest O/S</th></tr></thead>
+            <thead><tr><th>Date</th><th>No.</th><th>Name</th><th>Type</th><th>Amount</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -402,10 +385,10 @@
     <!-- REPORTS -->
     <section id="reports" class="tabpanel" hidden>
       <div class="card">
-        <div class="toolbar">
-          <button class="btn" id="btnPrintQuarter" disabled>🖨️ Print</button>
+        <div class="section-tools">
+          <h3 style="margin-right:auto">Quarterly Summary</h3>
+          <button class="btn" id="btnPrintQuarter">Print</button>
         </div>
-        <h3>Quarterly Summary (quick)</h3>
         <div class="grid-3">
           <div>
             <label>Quarter</label>
@@ -429,11 +412,11 @@
       </div>
 
       <div class="card" style="margin-top:12px">
-        <div class="toolbar">
-          <button class="btn" id="btnPrintPeriod" disabled>🖨️ Print</button>
+        <div class="section-tools">
+          <h3 style="margin-right:auto">Custom Period Report</h3>
+          <button class="btn" id="btnPeriodPrint" disabled>Print</button>
           <button class="btn" id="btnPeriodCSV" disabled>Export CSV</button>
         </div>
-        <h3>Custom Period Report (any dates, optional member)</h3>
         <div class="grid-3">
           <div>
             <label>From (inclusive)</label>
@@ -456,11 +439,11 @@
       </div>
 
       <div class="card" style="margin-top:12px">
-        <div class="toolbar">
-          <button class="btn" id="btnPrintStmt" disabled>🖨️ Print</button>
+        <div class="section-tools">
+          <h3 style="margin-right:auto">Member Statement</h3>
+          <button class="btn" id="btnMemberPrint" disabled>Print</button>
           <button class="btn" id="btnMemberCSV" disabled>Export CSV</button>
         </div>
-        <h3>Member Statement (activity in period + current snapshot)</h3>
         <div class="grid-3">
           <div>
             <label>Member</label>
@@ -484,9 +467,6 @@
       </div>
 
       <div class="card" style="margin-top:12px">
-        <div class="toolbar">
-          <button class="btn" id="btnPrintShare" disabled>🖨️ Print</button>
-        </div>
         <h3>Year-End Profit Sharing</h3>
         <div class="grid-3">
           <div>
@@ -508,17 +488,17 @@
       <div class="grid-2">
         <div class="card">
           <h3>Backup / Restore (Local JSON)</h3>
-          <div class="stack">
+          <div class="stack section-tools">
             <button class="btn primary" id="btnBackup2">Export JSON</button>
             <label class="btn"><input type="file" id="restoreFile2" accept="application/json" style="display:none">Import JSON</label>
-            <button class="btn" id="btnSaveLocal">💾 Save</button>
+            <button class="btn" id="btnSaveNow2">Save</button>
           </div>
-          <p class="help">Exports all members, loans, transactions, registrar, and settings.</p>
+          <p class="help">Exports all members, loans, transactions, registrar and settings to a JSON file.</p>
         </div>
 
         <div class="card">
           <h3>Excel Import / Export</h3>
-          <div class="stack">
+          <div class="stack section-tools">
             <button class="btn" id="btnExportXLSX">Export Excel (All Sheets)</button>
             <button class="btn" id="btnExportLedgerXLSX">Export Blank Ledger Template</button>
             <label class="btn"><input type="file" id="importXLSX" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">Import Excel</label>
@@ -533,15 +513,16 @@
               <input type="date" id="ledgerTo">
             </div>
             <div class="right" style="align-items:end">
-              <button class="btn" id="btnExportFilledLedger">Export Ledger (Filled)</button>
+              <button class="btn" id="btnExportFilledLedger">Export Filled Ledger</button>
             </div>
           </div>
-          <p class="help">Ledger has 30 rows (No. 1–30) + TOTALS. <b>Includes Shares column</b> after “Munno Taken”.</p>
+          <p class="help">Ledger now includes a <b>Shares</b> column (UGX + Count) after “Munno Taken”. Duplicate same-date entries are blocked on import.</p>
         </div>
 
+        <!-- Cloud Sync (Google Drive) -->
         <div class="card">
           <h3>Cloud Sync (Google Drive)</h3>
-          <div class="stack">
+          <div class="stack section-tools">
             <button class="btn" id="btnGSignIn">Sign in with Google</button>
             <button class="btn" id="btnCloudSave" disabled>Save to Google Drive</button>
             <button class="btn" id="btnCloudLoad" disabled>Load from Google Drive</button>
@@ -550,9 +531,7 @@
           <div class="stack" style="margin-top:8px">
             <span id="cloudStatus" class="pill">Signed out</span>
           </div>
-          <p class="help">
-            Uses “drive.file” scope and a single file: <b>kibiina-backup.json</b>. If you imported Excel/JSON, we auto-save to Drive.
-          </p>
+          <p class="help">Stores a single <b>kibiina-backup.json</b> file in your Drive (app-scoped). Works with the newest Google Identity Services.</p>
         </div>
 
         <div class="card">
@@ -566,14 +545,13 @@
         <div class="card">
           <h3>Danger Zone</h3>
           <button class="btn bad" id="btnWipe">Reset ALL data</button>
-          <p class="help">This cannot be undone (unless you exported a backup).</p>
+          <p class="help">Irreversible (unless you exported a backup).</p>
         </div>
       </div>
     </section>
   </main>
 
-<!-- External libs (loaded lazily where possible) -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- External (lazy) -->
 <script>
 /* ========= Utilities ========= */
 const UGX = (v)=> new Intl.NumberFormat('en-UG', {style:'currency', currency:'UGX', maximumFractionDigits:0}).format(v||0);
@@ -581,10 +559,6 @@ const todayStr = ()=> new Date().toLocaleDateString('en-CA', { timeZone: 'Africa
 const parseDate = s => new Date(s+'T00:00:00');
 const daysBetween = (a,b)=> Math.max(0, Math.round((parseDate(b)-parseDate(a)) / (1000*60*60*24)));
 const clone = x => JSON.parse(JSON.stringify(x));
-function fmtPct(p){ return `${(p*100).toFixed(2)}%`; }
-function addMonthsStr(dateStr, m){
-  const d = parseDate(dateStr); d.setMonth(d.getMonth()+Number(m||0)); return d.toISOString().slice(0,10);
-}
 function download(filename, blob){
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -592,32 +566,28 @@ function download(filename, blob){
   a.click();
   setTimeout(()=> URL.revokeObjectURL(a.href), 1000);
 }
-function printSection(containerId, title=''){
-  const el = document.getElementById(containerId);
-  if(!el) return alert('Nothing to print.');
-  const w = window.open('', '_blank');
-  w.document.write(`<html><head><title>${title||document.title}</title>
-  <style>
-  body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:16px}
-  table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #e5e7eb;padding:6px;text-align:left}
-  h2,h3{margin:.2rem 0 .6rem}
-  .muted{color:#64748b}
-  </style></head><body>${el.outerHTML}</body></html>`);
-  w.document.close(); w.focus(); w.print();
+function printSection(id, title=''){
+  const el = document.getElementById(id);
+  const html = `
+    <html><head><title>${title||document.title}</title>
+    <style>body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif} .table{width:100%;border-collapse:collapse} .table th,.table td{border:1px solid #ddd;padding:6px;text-align:left;font-size:12px}</style>
+    </head><body>${el? el.outerHTML : '<p>No content</p>'}</body></html>`;
+  const w = window.open('','_blank','width=900,height=700');
+  w.document.open(); w.document.write(html); w.document.close(); w.focus(); w.print();
 }
 
 /* ========= Data Model (localStorage) ========= */
-const KEY='kibiina_v4';
+const KEY='kibiina_v4_full';
 let db = {};
 try { db = JSON.parse(localStorage.getItem(KEY) || '{}'); }
 catch(e){ console.warn('Local data corrupted. Resetting storage.', e); localStorage.removeItem(KEY); db = {}; }
 if(!db.members){ // initialize
   db = {
     members: [], // {id,number,name,joinDate,shares,munno, registrar?}
-    loans: [],   // {id, memberNo, principalOut, rateMonthly, startDate, lastAccrual, accruedInterest, termMonths, expectedInterestTotal, expectedInterestPaid, contracts:[{principal,rate,months,expectedInterest,issuedTs}]}
+    loans: [],   // {id, memberNo, principalOut, rateMonthly, startDate, lastAccrual, accruedInterest, termMonths, expectedInterestTotal, expectedInterestPaid, contracts:[{amount,rateMonthly,months,expectedInterest,startDate}]}
     welfareFund: 0,
     tx: [],      // {ts, type, memberNo, amount, meta}
-    settings: { lastMeetingDate: todayStr(), lastAccrualPost: null, updatedAt: new Date().toISOString() }
+    settings: { lastMeetingDate: todayStr(), lastAccrualMonthPosted: '', updatedAt: new Date().toISOString() }
   };
   save();
 }
@@ -626,11 +596,18 @@ function save(){
   db.settings.updatedAt = new Date().toISOString();
   localStorage.setItem(KEY, JSON.stringify(db));
 }
-
-/* ========= Member helpers ========= */
 function getMemberByNo(no){ return db.members.find(m => Number(m.number) === Number(no)); }
 function ensureUniqueNo(no, ignoreId=null){ return !db.members.some(m=> Number(m.number)===Number(no) && m.id!==ignoreId); }
 function nextFreeNo(){ for(let i=1;i<=30;i++){ if(!db.members.some(m=>Number(m.number)===i)) return i; } return null; }
+
+/* ========= Duplicate-date guards ========= */
+function hasTxOn(date, memberNo, type){
+  return db.tx.some(t => t.ts === date && Number(t.memberNo||0) === Number(memberNo||0) && t.type === type);
+}
+function hasAnyMeetingPostOnDate(date){
+  const types = ['welfare','munno_deposit','share_buy'];
+  return db.tx.some(t => t.ts === date && types.includes(t.type));
+}
 
 /* ========= Tabs ========= */
 function wireTabs(){
@@ -651,68 +628,6 @@ function wireTabs(){
   });
 }
 
-/* ========= Accrual + Expected Interest ========= */
-function loanRateFor(amount){ if(amount>=1 && amount<=3999999) return 0.025; if(amount>=4000000) return 0.02; return 0; }
-
-/** Daily accrual to l.accruedInterest (prorated from monthly) up to given date */
-function accrueAll(upToDate){
-  const dTo = upToDate || todayStr();
-  db.loans.forEach(l=>{
-    if(l.principalOut<=0 || !l.rateMonthly) return;
-    const start = l.lastAccrual || l.startDate || dTo;
-    const days = daysBetween(start, dTo);
-    if(days<=0) return;
-    const dailyRate = l.rateMonthly/30;
-    const add = l.principalOut * dailyRate * days;
-    l.accruedInterest = Math.round((l.accruedInterest||0) + add);
-    l.lastAccrual = dTo;
-  });
-  save();
-}
-
-/** On app open: post monthly interest accrual journals (interest_accrual) at month-ends since last run */
-function ensureMonthEndAccruals(){
-  const last = db.settings.lastAccrualPost ? parseDate(db.settings.lastAccrualPost) : null;
-  const today = new Date();
-  // compute all month-ends from (last||oldest loan) to previous month end
-  let cursor = last ? new Date(last) : null;
-  if(!cursor){
-    let minStart = null;
-    db.loans.forEach(l=>{ if(l.startDate){ const d=parseDate(l.startDate); if(!minStart||d<minStart) minStart=d; }});
-    cursor = minStart || new Date(today.getFullYear(), today.getMonth(), 1);
-  }
-  function monthEnd(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); }
-  let nextME = monthEnd(cursor);
-  const prevMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-  while(nextME <= prevMonthEnd){
-    const ts = nextME.toISOString().slice(0,10);
-    // Accrue interest for each active loan snapshot (simple: principalOut × rate)
-    db.loans.forEach(l=>{
-      if(l.principalOut>0 && l.rateMonthly){
-        const add = Math.round(l.principalOut * l.rateMonthly);
-        l.accruedInterest = Math.round((l.accruedInterest||0) + add);
-        db.tx.push({ts, type:'interest_accrual', memberNo: Number(l.memberNo), amount: add, meta:{monthEnd:ts, rate:l.rateMonthly}});
-      }
-    });
-    db.settings.lastAccrualPost = ts;
-    nextME = monthEnd(new Date(nextME.getFullYear(), nextME.getMonth()+1, 1));
-  }
-  save();
-}
-
-/** Expected interest helpers (principal × rate × months) */
-function computeExpectedInterest(principal, rate, months){
-  return Math.round((Number(principal)||0) * (Number(rate)||0) * (Number(months)||0));
-}
-function interestPaidForMemberSince(no, since){
-  return db.tx.filter(t=> t.type==='repay_interest' && Number(t.memberNo)===Number(no) && (!since || t.ts>=since)).reduce((s,t)=>s+t.amount,0);
-}
-function expectedRemainingForLoan(l){
-  const paid = l.expectedInterestPaid || 0;
-  const total = l.expectedInterestTotal || 0;
-  return Math.max(0, total - paid);
-}
-
 /* ========= Dashboard ========= */
 function renderDashboard(){
   const n = db.members.length;
@@ -720,10 +635,10 @@ function renderDashboard(){
   const loansOut = db.loans.reduce((s,l)=> s + (l.principalOut||0), 0);
   const year = new Date().getFullYear();
   const intYTD = db.tx.filter(t => t.type==='repay_interest' && new Date(t.ts).getFullYear()===year)
-                      .reduce((s,t)=> s + t.amount, 0);
+                      .reduce((s,t)=> s + (t.amount||0), 0);
   const munnoAgg = db.members.reduce((s,m)=> s + (m.munno||0), 0);
-  const accruedOS = db.loans.reduce((s,l)=> s + (l.accruedInterest||0), 0);
-  const expectedAll = db.loans.reduce((s,l)=> s + expectedRemainingForLoan(l), 0);
+  const accruedAll = db.loans.reduce((s,l)=> s + (l.accruedInterest||0), 0);
+  const expectedRemain = db.loans.reduce((s,l)=> s + Math.max(0,(l.expectedInterestTotal||0)-(l.expectedInterestPaid||0)), 0);
 
   document.getElementById('statMembers').textContent = String(n);
   document.getElementById('statShareCap').textContent = UGX(shareCap);
@@ -731,8 +646,8 @@ function renderDashboard(){
   document.getElementById('statInterestYTD').textContent = UGX(intYTD);
   document.getElementById('fundWelfare').textContent = UGX(db.welfareFund||0);
   document.getElementById('fundMunno').textContent = UGX(munnoAgg);
-  document.getElementById('statAccruedOS').textContent = UGX(accruedOS);
-  document.getElementById('statExpectedInterest').textContent = UGX(expectedAll);
+  document.getElementById('statAccrued').textContent = UGX(accruedAll);
+  document.getElementById('statIntRemain').textContent = UGX(expectedRemain);
 }
 
 /* ========= Members ========= */
@@ -794,7 +709,7 @@ function wireMembers(){
       }
       if(number<1 || number>30){ alert('Member number must be between 1 and 30.'); return; }
       const name = document.getElementById('mName').value.trim();
-      const shares = Math.min(10, Math.max(0, parseInt(document.getElementById('mShares').value||0)));
+      const shares = Math.max(0, parseInt(document.getElementById('mShares').value||0)); // unlimited
       const munno = Math.max(0, parseInt(document.getElementById('mMunno').value||0));
       const join = document.getElementById('mJoin').value || todayStr();
       if(!ensureUniqueNo(number, editingId)){ alert('That number is already assigned to another member.'); return; }
@@ -810,7 +725,7 @@ function wireMembers(){
         const id='m'+Math.random().toString(36).slice(2,9);
         db.members.push({id, number, name, shares, munno, joinDate:join});
       }
-      save(); renderMembers(); renderDashboard(); resetMemberForm();
+      save(); renderMembers(); renderDashboard(); resetMemberForm(); alert('Saved.');
     };
   }
   const delBtn = document.getElementById('btnDeleteMember');
@@ -838,876 +753,13 @@ function wireMembers(){
   }
 }
 
-/* ========= Meeting (Sunday) ========= */
-function nextSundayStr(){ const d=new Date(); const day=d.getDay(); const diff=(7-day)%7; d.setDate(d.getDate()+diff); return d.toISOString().slice(0,10); }
-function initMeeting(){
-  const md = document.getElementById('meetDate'); if(md) md.value = db.settings.lastMeetingDate || nextSundayStr();
-  const wp = document.getElementById('welfarePer'); if(wp) wp.value = 1500;
-  const box = document.getElementById('meetingSheet'); if(box) box.innerHTML='';
-  const pm = document.getElementById('btnPostMeeting'); if(pm) pm.disabled = true;
-  const pr = document.getElementById('btnPrintMeeting'); if(pr) pr.disabled = true;
-}
-function wireMeeting(){
-  const setSun = document.getElementById('btnTodaySunday');
-  if(setSun) setSun.onclick = ()=>{ document.getElementById('meetDate').value = nextSundayStr(); };
-  const start = document.getElementById('btnStartMeeting');
-  if(start) start.onclick = ()=>{
-    const date = document.getElementById('meetDate').value || todayStr();
-    db.settings.lastMeetingDate = date; save();
-    const per = parseInt(document.getElementById('welfarePer').value||1500);
-    const box = document.getElementById('meetingSheet');
-    if(db.members.length===0){ box.innerHTML='<div class="warnmsg">No members yet. Add members first.</div>'; return; }
-    const sorted = [...db.members].sort((a,b)=> Number(a.number)-Number(b.number));
-    let html = `<table class="table"><thead><tr>
-        <th>No.</th><th>Name</th><th>Munno Deposit</th><th>Welfare (UGX ${per})</th><th>Buy Shares</th></tr></thead><tbody>`;
-    sorted.forEach((m)=>{
-      html += `<tr>
-        <td>${m.number}</td>
-        <td>${m.name}</td>
-        <td><input type="number" min="0" step="1" id="in_munno_${m.number}" placeholder="0"></td>
-        <td style="text-align:center"><input type="checkbox" id="in_wel_${m.number}" checked></td>
-        <td><input type="number" min="0" max="${Math.max(0,10-(m.shares||0))}" step="1" id="in_share_${m.number}" placeholder="0"></td>
-      </tr>`;
-    });
-    html += '</tbody></table>';
-    box.innerHTML = html;
-    document.getElementById('btnPostMeeting').disabled = false;
-    document.getElementById('btnPrintMeeting').disabled = false;
-  };
-  const post = document.getElementById('btnPostMeeting');
-  if(post) post.onclick = ()=>{
-    const date = document.getElementById('meetDate').value || todayStr();
-    const per = parseInt(document.getElementById('welfarePer').value||1500);
-    accrueAll(date);
-    db.members.forEach(m=>{
-      const munno = parseInt(document.getElementById(`in_munno_${m.number}`).value||0);
-      const wel = document.getElementById(`in_wel_${m.number}`).checked;
-      const sharesBuy = Math.min(10-(m.shares||0), Math.max(0, parseInt(document.getElementById(`in_share_${m.number}`).value||0)));
-      if(munno>0){
-        m.munno = (m.munno||0) + munno;
-        db.tx.push({ts:date, type:'munno_deposit', memberNo:m.number, amount:munno});
-      }
-      if(wel){
-        db.welfareFund = (db.welfareFund||0) + per;
-        db.tx.push({ts:date, type:'welfare', memberNo:m.number, amount:per});
-      }
-      if(sharesBuy>0){
-        m.shares = (m.shares||0) + sharesBuy;
-        db.tx.push({ts:date, type:'share_buy', memberNo:m.number, amount: sharesBuy*3000, meta:{shares:sharesBuy}});
-      }
-    });
-    save(); initMeeting(); renderDashboard(); alert('Meeting posted.');
-  };
-  const btnPrint = document.getElementById('btnPrintMeeting');
-  if(btnPrint) btnPrint.onclick = ()=> printSection('meetingSheet', 'Sunday Meeting Sheet');
-}
-
-/* ========= Loans ========= */
-function recalcExpectedLoanUI(){
-  const amount = parseInt(document.getElementById('loanAmt').value||0);
-  const months = parseInt(document.getElementById('loanTerm').value||1);
-  const date = document.getElementById('loanDate').value || todayStr();
-  const rate = loanRateFor(amount);
-  const expected = computeExpectedInterest(amount, rate, months);
-  document.getElementById('loanExpected').value = UGX(expected);
-  document.getElementById('loanDue').value = addMonthsStr(date, months);
-  const no = document.getElementById('loanMember').value;
-  const m = getMemberByNo(no);
-  const shareCap = (m?.shares||0)*3000;
-  const currentLoan = db.loans.find(l=>Number(l.memberNo)===Number(no));
-  const principalOut = currentLoan? currentLoan.principalOut : 0;
-  const limit = Math.max(0, shareCap*2 - principalOut);
-  document.getElementById('loanHint').innerHTML =
-    `Share capital: <b>${UGX(shareCap)}</b> → Limit: <b>${UGX(limit)}</b> • Rate: <b>${fmtPct(rate)}/mo</b>`;
-}
-function renderLoans(){
-  const sel = document.getElementById('loanMember'); if(!sel) return;
-  const sorted=[...db.members].sort((a,b)=>Number(a.number)-Number(b.number));
-  sel.innerHTML = sorted.map(m=>`<option value="${m.number}">${m.number} – ${m.name}</option>`).join('');
-  document.getElementById('loanAmt').value='';
-  document.getElementById('loanTerm').value='1';
-  document.getElementById('loanDate').value = todayStr();
-  document.getElementById('loanExpected').value='UGX 0';
-  document.getElementById('loanDue').value='-';
-  document.getElementById('loanHint').textContent='';
-  const tbody = document.querySelector('#loansTable tbody'); if(!tbody) return;
-  tbody.innerHTML='';
-  db.loans.forEach(l=>{
-    const m = getMemberByNo(l.memberNo);
-    const tr = document.createElement('tr');
-    const interestRemain = expectedRemainingForLoan(l);
-    tr.innerHTML = `<td>${l.memberNo}</td><td>${m? m.name:''}</td>
-      <td>${UGX(l.principalOut||0)}</td><td>${UGX(l.accruedInterest||0)}</td>
-      <td>${fmtPct(l.rateMonthly||0)}/mo</td>
-      <td>${l.termMonths||'-'} mo</td>
-      <td>${UGX(l.expectedInterestTotal||0)}</td>
-      <td>${UGX(interestRemain)}</td>
-      <td>${l.startDate||''}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-function wireLoans(){
-  ['loanAmt','loanTerm','loanDate','loanMember'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el){ el.addEventListener('input', recalcExpectedLoanUI); el.addEventListener('change', recalcExpectedLoanUI); }
-  });
-  const issue = document.getElementById('btnIssueLoan');
-  if(issue){
-    issue.onclick = ()=>{
-      const memberNo = document.getElementById('loanMember').value;
-      const m = getMemberByNo(memberNo);
-      if(!m){ alert('Select member'); return; }
-      const amount = parseInt(document.getElementById('loanAmt').value||0);
-      const months = parseInt(document.getElementById('loanTerm').value||1);
-      const date = document.getElementById('loanDate').value || todayStr();
-      if(amount<=0){ alert('Enter amount'); return; }
-      if(months<=0){ alert('Enter term (months)'); return; }
-      const current = db.loans.find(l=>Number(l.memberNo)===Number(memberNo));
-      const principalOut = current? current.principalOut : 0;
-      const limit = Math.max(0, ((m.shares||0)*3000)*2 - principalOut);
-      if(amount>limit){ alert('Amount exceeds limit.'); return; }
-      const rate = loanRateFor(amount);
-      const expected = computeExpectedInterest(amount, rate, months);
-      const due = addMonthsStr(date, months);
-
-      accrueAll(date);
-      if(current){
-        // top-up = new contract
-        current.principalOut += amount;
-        current.contracts = current.contracts||[];
-        current.contracts.push({principal:amount, rate, months, expectedInterest:expected, issuedTs:date, due});
-        current.expectedInterestTotal = Math.round((current.expectedInterestTotal||0) + expected);
-        db.tx.push({ts:date, type:'loan_topup', memberNo, amount});
-        db.tx.push({ts:date, type:'interest_expected', memberNo, amount:expected, meta:{months, principal:amount, rate}});
-      } else {
-        db.loans.push({
-          id:'L'+Math.random().toString(36).slice(2,9), memberNo, principalOut:amount, rateMonthly:rate,
-          startDate:date, lastAccrual:date, accruedInterest:0, termMonths:months,
-          expectedInterestTotal:expected, expectedInterestPaid:0, contracts:[{principal:amount, rate, months, expectedInterest:expected, issuedTs:date, due}]
-        });
-        db.tx.push({ts:date, type:'loan_issue', memberNo, amount});
-        db.tx.push({ts:date, type:'interest_expected', memberNo, amount:expected, meta:{months, principal:amount, rate}});
-      }
-      save(); renderLoans(); renderDashboard();
-      alert(`Loan recorded.\nExpected interest: ${UGX(expected)} • Due: ${due}`);
-    };
-  }
-  const saveBtn = document.getElementById('btnSaveAfterLoan'); if(saveBtn) saveBtn.onclick = ()=>{ save(); alert('Saved.'); };
-}
-
-/* ========= Repayments ========= */
-function renderRepay(){
-  const sel = document.getElementById('rpMember'); if(!sel) return;
-  const withLoans = db.members.filter(m=> db.loans.find(l=>Number(l.memberNo)===Number(m.number) && (l.principalOut>0 || (l.accruedInterest||0)>0)));
-  const sorted=[...withLoans].sort((a,b)=>Number(a.number)-Number(b.number));
-  sel.innerHTML = sorted.map(m=>`<option value="${m.number}">${m.number} – ${m.name}</option>`).join('');
-  document.getElementById('rpAmt').value='';
-  document.getElementById('rpDate').value = todayStr();
-  document.getElementById('rpApply').value = 'auto';
-  // Recent TX with balances
-  const tbody = document.querySelector('#txTable tbody'); if(!tbody) return;
-  const last = clone(db.tx).sort((a,b)=> new Date(b.ts) - new Date(a.ts)).slice(0,20);
-  tbody.innerHTML = last.map(t=>{
-    const m = getMemberByNo(t.memberNo);
-    const loan = db.loans.find(l=>Number(l.memberNo)===Number(t.memberNo));
-    const p = loan? loan.principalOut||0 : 0;
-    const ai= loan? loan.accruedInterest||0 : 0;
-    return `<tr><td>${t.ts}</td><td>${t.memberNo||''}</td><td>${m?m.name:''}</td><td>${t.type}</td><td>${UGX(t.amount)}</td><td>${UGX(p)}</td><td>${UGX(ai)}</td></tr>`;
-  }).join('');
-}
-function wireRepay(){
-  const post = document.getElementById('btnPostRepay');
-  if(post){
-    post.onclick = ()=>{
-      const memberNo = document.getElementById('rpMember').value;
-      const amt = parseInt(document.getElementById('rpAmt').value||0);
-      const date = document.getElementById('rpDate').value || todayStr();
-      const how = document.getElementById('rpApply').value;
-      if(amt<=0){ alert('Enter amount'); return; }
-      const loan = db.loans.find(l=>Number(l.memberNo)===Number(memberNo));
-      if(!loan){ alert('No active loan'); return; }
-      accrueAll(date);
-      let remain = amt, paidInt=0, paidP=0;
-      if(how==='auto' || how==='interest'){
-        const payInt = Math.min(loan.accruedInterest||0, remain);
-        if(payInt>0){
-          loan.accruedInterest -= payInt;
-          loan.expectedInterestPaid = Math.round((loan.expectedInterestPaid||0) + payInt);
-          db.tx.push({ts:date, type:'repay_interest', memberNo, amount:payInt});
-          remain -= payInt; paidInt=payInt;
-        }
-      }
-      if((how==='auto' || how==='principal') && remain>0){
-        const payP = Math.min(loan.principalOut, remain);
-        if(payP>0){
-          loan.principalOut -= payP;
-          db.tx.push({ts:date, type:'repay_principal', memberNo, amount:payP});
-          remain -= payP; paidP=payP;
-        }
-      }
-      save(); renderRepay(); renderLoans(); renderDashboard();
-      alert(`Repayment posted.\nInterest paid: ${UGX(paidInt)} • Principal paid: ${UGX(paidP)}\nNew principal balance: ${UGX(loan.principalOut)} • Interest O/S: ${UGX(loan.accruedInterest||0)}`);
-    };
-  }
-  const saveBtn = document.getElementById('btnSaveAfterRepay'); if(saveBtn) saveBtn.onclick = ()=>{ save(); alert('Saved.'); };
-}
-</script>
-<script>
-/* ========= Reports ========= */
-function initReports(){
-  const y = new Date().getFullYear();
-  document.getElementById('rYear').value = y;
-  document.getElementById('yShareYear').value = y;
-
-  // Default ranges (YTD)
-  const from = new Date(y,0,1).toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
-  const to   = new Date().toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
-  const pF = document.getElementById('pFrom'); if(pF) pF.value = from;
-  const pT = document.getElementById('pTo');   if(pT) pT.value = to;
-  fillMemberOptions('pMember', true);
-  fillMemberOptions('msMember', false);
-  const msF = document.getElementById('msFrom'); if(msF) msF.value = from;
-  const msT = document.getElementById('msTo');   if(msT) msT.value = to;
-
-  document.getElementById('quarterOut').innerHTML='';
-  document.getElementById('periodOut').innerHTML='';
-  document.getElementById('msOut').innerHTML='';
-  ['btnPrintQuarter','btnPrintPeriod','btnPrintStmt','btnPrintShare','btnPeriodCSV','btnMemberCSV'].forEach(id=>{
-    const b=document.getElementById(id); if(b) b.disabled=true;
-  });
-}
-function fillMemberOptions(selectId, includeAll){
-  const sel = document.getElementById(selectId); if(!sel) return;
-  const rows = [...db.members].sort((a,b)=>Number(a.number)-Number(b.number));
-  sel.innerHTML = (includeAll? `<option value="all">All Members</option>` : '') +
-    rows.map(m=>`<option value="${m.number}">${m.number} – ${m.name||''}</option>`).join('');
-  if(!includeAll && rows.length) sel.value = String(rows[0].number);
-}
-function quarterRange(q, year){
-  const y=Number(year);
-  if(q==='Q1') return [new Date(y,0,1), new Date(y,2,31)];
-  if(q==='Q2') return [new Date(y,3,1), new Date(y,5,30)];
-  if(q==='Q3') return [new Date(y,6,1), new Date(y,8,30)];
-  return [new Date(y,9,1), new Date(y,11,31)];
-}
-function wireReports(){
-  const runQ = document.getElementById('btnRunQuarter');
-  if(runQ){
-    runQ.onclick = ()=>{
-      const q = document.getElementById('rQuarter').value;
-      const y = parseInt(document.getElementById('rYear').value||new Date().getFullYear());
-      const [a,b] = quarterRange(q,y);
-      const inRange = t => { const d = new Date(t.ts); return d>=a && d<=b; };
-      const welfare = db.tx.filter(t=>t.type==='welfare' && inRange(t)).reduce((s,t)=>s+t.amount,0);
-      const munno = db.tx.filter(t=>t.type==='munno_deposit' && inRange(t)).reduce((s,t)=>s+t.amount,0);
-      const shares = db.tx.filter(t=>t.type==='share_buy' && inRange(t)).reduce((s,t)=>s+t.amount,0);
-      const interestRec = db.tx.filter(t=>t.type==='repay_interest' && inRange(t)).reduce((s,t)=>s+t.amount,0);
-      const principalRec = db.tx.filter(t=>t.type==='repay_principal' && inRange(t)).reduce((s,t)=>s+t.amount,0);
-      const loansOut = db.tx.filter(t=>(t.type==='loan_issue'||t.type==='loan_topup') && inRange(t)).reduce((s,t)=>s+t.amount,0);
-      document.getElementById('quarterOut').innerHTML = `
-        <div class="grid-3">
-          <div class="stat"><span class="muted">Welfare contributions</span><b>${UGX(welfare)}</b></div>
-          <div class="stat"><span class="muted">Munno deposits</span><b>${UGX(munno)}</b></div>
-          <div class="stat"><span class="muted">Shares purchased</span><b>${UGX(shares)}</b></div>
-        </div>
-        <div class="grid-3" style="margin-top:8px">
-          <div class="stat"><span class="muted">Loans issued/topups</span><b>${UGX(loansOut)}</b></div>
-          <div class="stat"><span class="muted">Principal repaid</span><b>${UGX(principalRec)}</b></div>
-          <div class="stat"><span class="muted">Interest collected</span><b>${UGX(interestRec)}</b></div>
-        </div>
-      `;
-      const pb=document.getElementById('btnPrintQuarter'); if(pb) pb.disabled=false; pb.onclick=()=>printSection('quarterOut','Quarterly Summary');
-    };
-  }
-  const btnP = document.getElementById('btnRunPeriod'); if(btnP) btnP.onclick = renderPeriodReport;
-  const btnMS = document.getElementById('btnMemberStmt'); if(btnMS) btnMS.onclick = renderMemberStatement;
-  const share = document.getElementById('btnShareOut');
-  if(share){
-    share.onclick = ()=>{
-      const year = parseInt(document.getElementById('yShareYear').value||new Date().getFullYear());
-      const totalInterest = db.tx.filter(t => t.type==='repay_interest' && new Date(t.ts).getFullYear()===year)
-                                 .reduce((s,t)=>s+t.amount,0);
-      const members = clone(db.members).map(m=> ({...m, shareCap:(m.shares||0)*3000}));
-      const pool = members.reduce((s,m)=> s+m.shareCap, 0);
-      let html = `<div class="stat"><span class="muted">Total interest (year)</span><b>${UGX(totalInterest)}</b></div>`;
-      if(pool<=0 || totalInterest<=0){
-        html += `<p class="warnmsg" style="margin-top:8px">No share capital or no interest collected for ${year}.</p>`;
-      }else{
-        html += `<table class="table" style="margin-top:8px"><thead><tr><th>No.</th><th>Name</th><th>Shares</th><th>Share Capital</th><th>Share %</th><th>Payout</th></tr></thead><tbody>`;
-        members.sort((a,b)=>Number(a.number)-Number(b.number)).forEach(m=>{
-          const pct = (m.shareCap||0)/pool;
-          const pay = Math.round(totalInterest * pct);
-          html += `<tr><td>${m.number||''}</td><td>${m.name}</td><td>${m.shares||0}</td><td>${UGX(m.shareCap||0)}</td><td>${(pct*100).toFixed(2)}%</td><td>${UGX(pay)}</td></tr>`;
-        });
-        html += `</tbody></table>`;
-      }
-      document.getElementById('shareOut').innerHTML = html;
-      const pb=document.getElementById('btnPrintShare'); if(pb) pb.disabled=false; pb.onclick=()=>printSection('shareOut','Year-End Profit Sharing');
-    };
-  }
-}
-
-/* ===== Period helpers ===== */
-function normalizeRange(fromStr, toStr){
-  const defFrom = new Date(new Date().getFullYear(),0,1).toLocaleDateString('en-CA',{timeZone:'Africa/Kampala'});
-  const defTo   = todayStr();
-  const from = fromStr || defFrom;
-  const to   = toStr   || defTo;
-  const a = new Date(from); const b = new Date(to);
-  return (a>b) ? [to, from] : [from, to];
-}
-function inRange(ts, from, to){
-  const d = new Date(ts);
-  return d>=new Date(from) && d<=new Date(to);
-}
-function sumPeriod(from, to, memberNoOrAll='all'){
-  const isAll = memberNoOrAll==='all';
-  const sums = {
-    welfare:0, munnoDep:0, munnoReturned:0, munnoTaken:0,
-    sharesUGX:0, sharesCount:0,
-    loanIssue:0, loanTopup:0, loanTaken:0,
-    repayPrincipal:0, repayInterest:0, fines:0, loanForm:0, txCount:0
-  };
-  const perMember = {};
-  const addMemberRow = (no)=> perMember[no]||(perMember[no]={ No:no, Name:(getMemberByNo(no)?.name)||'',
-    Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0, SharesUGX:0, SharesCount:0, LoanTaken:0, PrincipalRepaid:0, InterestPaid:0, Fines:0, LoanForm:0 });
-
-  db.tx.forEach(t=>{
-    if(!t.ts || !inRange(t.ts, from, to)) return;
-    if(!isAll && Number(t.memberNo)!==Number(memberNoOrAll)) return;
-    const no = Number(t.memberNo)||0;
-    sums.txCount++;
-    switch(t.type){
-      case 'welfare': sums.welfare+=t.amount; if(no){addMemberRow(no); perMember[no].Welfare+=t.amount;} break;
-      case 'munno_deposit': sums.munnoDep+=t.amount; if(no){addMemberRow(no); perMember[no].Munno+=t.amount;} break;
-      case 'munno_returned': case 'munno_withdraw':
-        sums.munnoReturned+=t.amount; if(no){addMemberRow(no); perMember[no].MunnoReturned+=t.amount;} break;
-      case 'munno_taken':
-        sums.munnoTaken+=t.amount; if(no){addMemberRow(no); perMember[no].MunnoTaken+=t.amount;} break;
-      case 'share_buy':
-        sums.sharesUGX+=t.amount; sums.sharesCount += (t.meta?.shares||0);
-        if(no){addMemberRow(no); perMember[no].SharesUGX+=t.amount; perMember[no].SharesCount+=(t.meta?.shares||0);}
-        break;
-      case 'loan_issue':
-        sums.loanIssue+=t.amount; sums.loanTaken+=t.amount;
-        if(no){addMemberRow(no); perMember[no].LoanTaken+=t.amount;} break;
-      case 'loan_topup':
-        sums.loanTopup+=t.amount; sums.loanTaken+=t.amount;
-        if(no){addMemberRow(no); perMember[no].LoanTaken+=t.amount;} break;
-      case 'repay_principal':
-        sums.repayPrincipal+=t.amount; if(no){addMemberRow(no); perMember[no].PrincipalRepaid+=t.amount;} break;
-      case 'repay_interest':
-        sums.repayInterest+=t.amount; if(no){addMemberRow(no); perMember[no].InterestPaid+=t.amount;} break;
-      case 'fine':
-        sums.fines+=t.amount; if(no){addMemberRow(no); perMember[no].Fines+=t.amount;} break;
-      case 'loan_form_fee':
-        sums.loanForm+=t.amount; if(no){addMemberRow(no); perMember[no].LoanForm+=t.amount;} break;
-    }
-  });
-  return { sums, perMember: Object.values(perMember).sort((a,b)=>a.No-b.No) };
-}
-/* ===== Render: Custom Period ===== */
-let lastPeriodCSVRows = null;
-function renderPeriodReport(){
-  const [from, to] = normalizeRange(
-    document.getElementById('pFrom').value,
-    document.getElementById('pTo').value
-  );
-  const who = document.getElementById('pMember').value || 'all';
-  const { sums, perMember } = sumPeriod(from, to, who);
-
-  let html = `
-    <div class="grid-3">
-      <div class="stat"><span class="muted">Dates</span><b>${from} → ${to}</b></div>
-      <div class="stat"><span class="muted">Transactions</span><b>${sums.txCount}</b></div>
-      <div class="stat"><span class="muted">Interest collected</span><b>${UGX(sums.repayInterest)}</b></div>
-    </div>
-    <div class="grid-3" style="margin-top:8px">
-      <div class="stat"><span class="muted">Welfare</span><b>${UGX(sums.welfare)}</b></div>
-      <div class="stat"><span class="muted">Munno deposits</span><b>${UGX(sums.munnoDep)}</b></div>
-      <div class="stat"><span class="muted">Munno returned</span><b>${UGX(sums.munnoReturned)}</b></div>
-    </div>
-    <div class="grid-3" style="margin-top:8px">
-      <div class="stat"><span class="muted">Shares (UGX)</span><b>${UGX(sums.sharesUGX)}</b></div>
-      <div class="stat"><span class="muted">Shares (count)</span><b>${sums.sharesCount}</b></div>
-      <div class="stat"><span class="muted">Fines</span><b>${UGX(sums.fines)}</b></div>
-    </div>
-    <div class="grid-3" style="margin-top:8px">
-      <div class="stat"><span class="muted">Loans issued</span><b>${UGX(sums.loanIssue)}</b></div>
-      <div class="stat"><span class="muted">Loan topups</span><b>${UGX(sums.loanTopup)}</b></div>
-      <div class="stat"><span class="muted">Principal repaid</span><b>${UGX(sums.repayPrincipal)}</b></div>
-    </div>
-  `;
-
-  if(perMember.length){
-    const headerExtra = (who==='all')
-      ? `<h4 style="margin-top:12px">Per-member breakdown</h4>`
-      : `<h4 style="margin-top:12px">Member ${who} – ${(getMemberByNo(who)?.name)||''}</h4>`;
-    html += `
-      ${headerExtra}
-      <table class="table">
-        <thead>
-          <tr>
-            <th>No.</th><th>Name</th>
-            <th>Welfare</th><th>Munno +</th><th>Munno Returned</th><th>Munno Taken</th>
-            <th>Shares (UGX)</th><th>Shares (#)</th>
-            <th>Loans Taken</th><th>Principal Repaid</th><th>Interest Paid</th><th>Fines</th><th>Loan Form</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${perMember.map(r=>`
-            <tr>
-              <td>${r.No}</td><td>${r.Name}</td>
-              <td>${UGX(r.Welfare)}</td><td>${UGX(r.Munno)}</td><td>${UGX(r.MunnoReturned)}</td><td>${UGX(r.MunnoTaken)}</td>
-              <td>${UGX(r.SharesUGX)}</td><td>${r.SharesCount}</td>
-              <td>${UGX(r.LoanTaken)}</td><td>${UGX(r.PrincipalRepaid)}</td><td>${UGX(r.InterestPaid)}</td><td>${UGX(r.Fines)}</td><td>${UGX(r.LoanForm)}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-    `;
-    lastPeriodCSVRows = [
-      ['From',from,'To',to,'Member',who],
-      [],
-      ['No','Name','Welfare','Munno+','MunnoReturned','MunnoTaken','SharesUGX','SharesCount','LoanTaken','PrincipalRepaid','InterestPaid','Fines','LoanForm'],
-      ...perMember.map(r=>[r.No,r.Name,r.Welfare,r.Munno,r.MunnoReturned,r.MunnoTaken,r.SharesUGX,r.SharesCount,r.LoanTaken,r.PrincipalRepaid,r.InterestPaid,r.Fines,r.LoanForm])
-    ];
-    const pb=document.getElementById('btnPrintPeriod'); if(pb) pb.disabled=false; pb.onclick=()=>printSection('periodOut','Custom Period Report');
-    const csvB=document.getElementById('btnPeriodCSV'); if(csvB) csvB.disabled=false; csvB.onclick=exportPeriodCSV;
-  }else{
-    lastPeriodCSVRows = null;
-    document.getElementById('btnPeriodCSV').disabled = true;
-  }
-
-  document.getElementById('periodOut').innerHTML = html;
-}
-function toCSV(rows){
-  return rows.map(r=>r.map(v=>{
-    const s = (v===undefined||v===null)? '' : String(v);
-    if(s.includes(',')||s.includes('"')||s.includes('\n')) return `"${s.replace(/"/g,'""')}"`;
-    return s;
-  }).join(',')).join('\n');
-}
-function exportPeriodCSV(){
-  if(!lastPeriodCSVRows){ alert('Run a period report first.'); return; }
-  const csv = toCSV(lastPeriodCSVRows);
-  download('period-report.csv', new Blob([csv], {type:'text/csv;charset=utf-8'}));
-}
-
-/* ===== Member Statement ===== */
-let lastMemberCSVRows = null;
-function currentSnapshotFor(no){
-  accrueAll(todayStr());
-  const m = getMemberByNo(no);
-  const loan = db.loans.find(l=>Number(l.memberNo)===Number(no));
-  return {
-    shares: m?.shares||0,
-    shareCap: (m?.shares||0)*3000,
-    munno: m?.munno||0,
-    principalOut: loan?.principalOut||0,
-    accruedInterest: loan?.accruedInterest||0
-  };
-}
-function txForMemberInRange(no, from, to){
-  return db.tx.filter(t=> Number(t.memberNo)===Number(no) && t.ts && inRange(t.ts, from, to))
-              .sort((a,b)=> new Date(a.ts)-new Date(b.ts));
-}
-function renderMemberStatement(){
-  const sel = document.getElementById('msMember'); if(!sel||!sel.value){ alert('Choose a member'); return; }
-  const no = Number(sel.value);
-  const [from, to] = normalizeRange(document.getElementById('msFrom').value, document.getElementById('msTo').value);
-  const person = getMemberByNo(no);
-  const { sums } = sumPeriod(from, to, no);
-  const snap = currentSnapshotFor(no);
-  const tx = txForMemberInRange(no, from, to);
-
-  let html = `
-    <div class="grid-3">
-      <div class="stat"><span class="muted">Member</span><b>${no} – ${person?.name||''}</b></div>
-      <div class="stat"><span class="muted">Period</span><b>${from} → ${to}</b></div>
-      <div class="stat"><span class="muted">Transactions in period</span><b>${tx.length}</b></div>
-    </div>
-    <h4 style="margin-top:10px">Current Snapshot (now)</h4>
-    <div class="grid-3">
-      <div class="stat"><span class="muted">Shares</span><b>${snap.shares} (UGX ${UGX(snap.shareCap).replace('UGX ','')})</b></div>
-      <div class="stat"><span class="muted">Munno balance</span><b>${UGX(snap.munno)}</b></div>
-      <div class="stat"><span class="muted">Loan O/S • Interest O/S</span><b>${UGX(snap.principalOut)} • ${UGX(snap.accruedInterest)}</b></div>
-    </div>
-    <h4 style="margin-top:10px">Activity in Period</h4>
-    <div class="grid-3">
-      <div class="stat"><span class="muted">Welfare</span><b>${UGX(sums.welfare)}</b></div>
-      <div class="stat"><span class="muted">Munno +</span><b>${UGX(sums.munnoDep)}</b></div>
-      <div class="stat"><span class="muted">Munno returned</span><b>${UGX(sums.munnoReturned)}</b></div>
-    </div>
-    <div class="grid-3" style="margin-top:8px">
-      <div class="stat"><span class="muted">Shares (UGX)</span><b>${UGX(sums.sharesUGX)}</b></div>
-      <div class="stat"><span class="muted">Shares (count)</span><b>${sums.sharesCount}</b></div>
-      <div class="stat"><span class="muted">Fines</span><b>${UGX(sums.fines)}</b></div>
-    </div>
-    <div class="grid-3" style="margin-top:8px">
-      <div class="stat"><span class="muted">Loans taken</span><b>${UGX(sums.loanTaken)}</b></div>
-      <div class="stat"><span class="muted">Principal repaid</span><b>${UGX(sums.repayPrincipal)}</b></div>
-      <div class="stat"><span class="muted">Interest paid</span><b>${UGX(sums.repayInterest)}</b></div>
-    </div>
-    <h4 style="margin-top:12px">Transactions (${tx.length})</h4>
-    <table class="table">
-      <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Meta</th></tr></thead>
-      <tbody>
-        ${tx.map(t=>`<tr><td>${t.ts}</td><td>${t.type}</td><td>${UGX(t.amount)}</td><td>${t.meta?JSON.stringify(t.meta):''}</td></tr>`).join('')}
-      </tbody>
-    </table>
-  `;
-  document.getElementById('msOut').innerHTML = html;
-  lastMemberCSVRows = [
-    ['Member', `${no} – ${person?.name||''}`],
-    ['From', from, 'To', to],
-    [],
-    ['Date','Type','Amount','Meta'],
-    ...tx.map(t=>[t.ts, t.type, t.amount, t.meta? JSON.stringify(t.meta): ''])
-  ];
-  const pb=document.getElementById('btnPrintStmt'); if(pb) pb.disabled=false; pb.onclick=()=>printSection('msOut','Member Statement');
-  const csvB=document.getElementById('btnMemberCSV'); if(csvB) csvB.disabled=(tx.length===0); csvB.onclick=exportMemberCSV;
-}
-function exportMemberCSV(){
-  if(!lastMemberCSVRows){ alert('Run a member statement first.'); return; }
-  const csv = toCSV(lastMemberCSVRows);
-  download('member-statement.csv', new Blob([csv], {type:'text/csv;charset=utf-8'}));
-}
-
-/* ========= Backup/Restore (JSON) ========= */
-function wireBackup(){
-  const b1 = document.getElementById('btnBackup');
-  const b2 = document.getElementById('btnBackup2');
-  if(b1) b1.onclick = ()=>{ accrueAll(); download('kibiina-backup.json', new Blob([JSON.stringify(db,null,2)], {type:'application/json'})); };
-  if(b2) b2.onclick = ()=>{ accrueAll(); download('kibiina-backup.json', new Blob([JSON.stringify(db,null,2)], {type:'application/json'})); };
-  const r1 = document.getElementById('restoreFile');
-  const r2 = document.getElementById('restoreFile2');
-  if(r1) r1.addEventListener('change', handleRestore);
-  if(r2) r2.addEventListener('change', handleRestore);
-  const wipe = document.getElementById('btnWipe');
-  if(wipe) wipe.onclick = ()=>{ if(!confirm('This will delete ALL data. Continue?')) return; localStorage.removeItem(KEY); location.reload(); };
-  const saveLocal = document.getElementById('btnSaveLocal'); if(saveLocal) saveLocal.onclick = ()=>{ save(); alert('Saved locally.'); };
-  const saveNow = document.getElementById('btnSaveNow'); if(saveNow) saveNow.onclick = ()=>{ save(); alert('Saved locally.'); };
-}
-async function handleRestore(e){
-  const f = e.target.files[0]; if(!f) return;
-  const r = new FileReader();
-  r.onload = async ()=>{
-    try{
-      const obj = JSON.parse(r.result);
-      if(!obj.members||!obj.loans||!obj.tx){ alert('Invalid file'); return;}
-      db = obj; save();
-      renderDashboard(); renderMembers(); initMeeting(); renderLoans(); renderRepay(); initReports(); renderRegistrar();
-      await maybeDriveAutoSave(); // auto-save to Drive
-      alert('JSON imported and saved to Google Drive.');
-    }catch(err){ alert('Invalid JSON'); }
-  };
-  r.readAsText(f);
-}
-
-/* ========= Excel Import / Export (SheetJS) ========= */
-// Template contract
-const TEMPLATE_VERSION = 'kibiina-xlsx-v2'; // v2 adds Shares column to Ledger
-const MEMBERS_HEADERS = ['No','Name','JoinDate','Shares','Munno'];
-const LOANS_HEADERS   = ['No','PrincipalOut','RateMonthly','StartDate','LastAccrual','AccruedInterest','TermMonths','ExpectedInterest'];
-const TX_HEADERS      = ['Date','No','Type','Amount','Meta'];
-function ledgerHeaders(){
-  // Shares column is after MunnoTaken (as requested)
-  return ['No','Name','Welfare','Munno','MunnoReturned','MunnoTaken','SharesUGX','LoanTaken','LoanReturned','LoanForm','Period','Interest','LoanBalance','Fines'];
-}
-function membersToRows(){
-  const map = new Map(db.members.map(m=>[Number(m.number), m]));
-  const out=[];
-  for(let i=1;i<=30;i++){
-    const m = map.get(i);
-    out.push({ No:i, Name:m?m.name:'', JoinDate:m?m.joinDate:'', Shares:m?m.shares||0:0, Munno:m?m.munno||0:0 });
-  }
-  return out;
-}
-function loansToRows(){
-  return db.loans.map(l=>({ No:l.memberNo, PrincipalOut:l.principalOut, RateMonthly:l.rateMonthly, StartDate:l.startDate, LastAccrual:l.lastAccrual||'', AccruedInterest:l.accruedInterest||0, TermMonths:l.termMonths||'', ExpectedInterest:l.expectedInterestTotal||0 }));
-}
-function txToRows(){
-  return db.tx.map(t=>({ Date:t.ts, No:t.memberNo||'', Type:t.type, Amount:t.amount, Meta:t.meta?JSON.stringify(t.meta):'' }));
-}
-function ledgerRowsBlank(){
-  const rows=[];
-  for(let i=1;i<=30;i++){
-    rows.push({ No:i, Name:(getMemberByNo(i)?.name)||'', Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0, SharesUGX:0, LoanTaken:0, LoanReturned:0, LoanForm:0, Period:'', Interest:0, LoanBalance:0, Fines:0 });
-  }
-  return rows;
-}
-function computeLedgerRowsFilled(fromStr, toStr){
-  const today = new Date().toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
-  const yearStart = new Date(new Date().getFullYear(),0,1).toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
-  const from = fromStr || yearStart;
-  const to = toStr || today;
-  accrueAll(to);
-  const sums = {};
-  for(let i=1;i<=30;i++) sums[i] = { No:i, Name:(getMemberByNo(i)?.name)||'', Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0, SharesUGX:0, LoanTaken:0, LoanReturned:0, LoanForm:0, Period:to, Interest:0, LoanBalance:0, Fines:0 };
-  const inRange = (ts)=>{ const d = new Date(ts); return d>=new Date(from) && d<=new Date(to); };
-  db.tx.forEach(t=>{
-    if(!t.ts || !inRange(t.ts)) return;
-    const no = Number(t.memberNo); if(!no) return;
-    const amt = Number(t.amount)||0;
-    switch(t.type){
-      case 'welfare': sums[no].Welfare += amt; break;
-      case 'munno_deposit': sums[no].Munno += amt; break;
-      case 'munno_withdraw': sums[no].MunnoReturned += amt; break;
-      case 'munno_returned': sums[no].MunnoReturned += amt; break;
-      case 'munno_taken': sums[no].MunnoTaken += amt; break;
-      case 'share_buy': sums[no].SharesUGX += amt; break; // NEW column
-      case 'loan_issue':
-      case 'loan_topup': sums[no].LoanTaken += amt; break;
-      case 'repay_principal': sums[no].LoanReturned += amt; break;
-      case 'loan_form_fee': sums[no].LoanForm += amt; break;
-      case 'repay_interest': sums[no].Interest += amt; break;
-      case 'fine': sums[no].Fines += amt; break;
-    }
-  });
-  db.loans.forEach(l=>{ const no=Number(l.memberNo); if(!no) return; sums[no].LoanBalance = (sums[no].LoanBalance||0) + (l.principalOut||0); });
-  return Object.values(sums);
-}
-function colLetter(n){ let s=''; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; }
-function addTotalsRow(ws, numericCols){
-  const headerRow=1; const firstData=2; const lastData=31; const totalRow=32;
-  ws['A'+totalRow] = {t:'s', v:'TOTALS'};
-  numericCols.forEach(idx=>{ const col=colLetter(idx); ws[col+totalRow] = { t:'n', f:`SUM(${col}${firstData}:${col}${lastData})` }; });
-  const lastCol = colLetter(Math.max(...numericCols, 14));
-  ws['!ref'] = `A1:${lastCol}${totalRow}`;
-}
-// Validate headers & numbers
-function readHeaders(ws){
-  const r = XLSX.utils.decode_range(ws['!ref']);
-  const headers=[];
-  for(let c=r.s.c;c<=r.e.c;c++){
-    const cellAddr = XLSX.utils.encode_cell({r:0,c});
-    const cell = ws[cellAddr];
-    headers.push(cell? String(cell.v).trim(): '');
-  }
-  return headers;
-}
-function eqArr(a,b){ if(a.length!==b.length) return false; for(let i=0;i<a.length;i++){ if(String(a[i])!==String(b[i])) return false; } return true; }
-function validateNoSet(rows, sheetName){
-  const set = new Set(rows.map(r=> Number(r.No)));
-  const missing = [];
-  for(let i=1;i<=30;i++){ if(!set.has(i)) missing.push(i); }
-  return missing.length? `${sheetName}: missing member numbers ${missing.join(', ')}` : null;
-}
-function validateWorkbook(XLSX, wb){
-  const errs=[];
-  const mustSheets = ['Members','Ledger'];
-  mustSheets.forEach(n=>{ if(!wb.Sheets[n]) errs.push(`Missing sheet: ${n}`); });
-  if(errs.length) return errs;
-  const hMembers = readHeaders(wb.Sheets['Members']);
-  if(!eqArr(hMembers, MEMBERS_HEADERS)) errs.push(`Members headers must be ${MEMBERS_HEADERS.join(', ')}`);
-  const hLedger = readHeaders(wb.Sheets['Ledger']);
-  if(!eqArr(hLedger, ledgerHeaders())) errs.push(`Ledger headers must be ${ledgerHeaders().join(', ')}`);
-  if(wb.Sheets['Loans']){
-    const hLoans = readHeaders(wb.Sheets['Loans']);
-    if(!eqArr(hLoans, LOANS_HEADERS)) errs.push(`Loans headers must be ${LOANS_HEADERS.join(', ')}`);
-  }
-  if(wb.Sheets['Transactions']){
-    const hTx = readHeaders(wb.Sheets['Transactions']);
-    if(!eqArr(hTx, TX_HEADERS)) errs.push(`Transactions headers must be ${TX_HEADERS.join(', ')}`);
-  }
-  const memRows = XLSX.utils.sheet_to_json(wb.Sheets['Members']);
-  const ledRows = XLSX.utils.sheet_to_json(wb.Sheets['Ledger']);
-  const m1 = validateNoSet(memRows,'Members'); if(m1) errs.push(m1);
-  const m2 = validateNoSet(ledRows,'Ledger');  if(m2) errs.push(m2);
-  return errs;
-}
-async function doExport(includeLedger=true){
-  const wb = XLSX.utils.book_new();
-  const wsMeta = XLSX.utils.aoa_to_sheet([
-    ['Template', TEMPLATE_VERSION],
-    ['Exported', new Date().toISOString()]
-  ]);
-  XLSX.utils.book_append_sheet(wb, wsMeta, 'Meta');
-  const wsMembers = XLSX.utils.json_to_sheet(membersToRows(), {header:MEMBERS_HEADERS});
-  XLSX.utils.book_append_sheet(wb, wsMembers, 'Members');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(loansToRows(), {header:LOANS_HEADERS}), 'Loans');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txToRows(), {header:TX_HEADERS}), 'Transactions');
-  if(includeLedger){
-    const from = (document.getElementById('ledgerFrom')?.value)||'';
-    const to   = (document.getElementById('ledgerTo')?.value)||'';
-    const wsLedger = XLSX.utils.json_to_sheet(computeLedgerRowsFilled(from, to), {header:ledgerHeaders()});
-    // numeric col indices (1-based): Welfare=3 Munno=4 MunnoReturned=5 MunnoTaken=6 SharesUGX=7 LoanTaken=8 LoanReturned=9 LoanForm=10 Interest=12 LoanBalance=13 Fines=14
-    addTotalsRow(wsLedger, [3,4,5,6,7,8,9,10,12,13,14]);
-    XLSX.utils.book_append_sheet(wb, wsLedger, 'Ledger');
-  }
-  XLSX.writeFile(wb, `kibiina-${new Date().toISOString().slice(0,10)}.xlsx`);
-}
-function wireExcel(){
-  const ex = document.getElementById('btnExportXLSX');
-  if(ex) ex.onclick = async ()=>{ try{ await doExport(true); }catch(err){ alert(err.message||'Failed to export Excel'); } };
-  const exL = document.getElementById('btnExportLedgerXLSX');
-  if(exL) exL.onclick = async ()=>{
-    try{
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(ledgerRowsBlank(), {header:ledgerHeaders()});
-      addTotalsRow(ws, [3,4,5,6,7,8,9,10,12,13,14]);
-      XLSX.utils.book_append_sheet(wb, ws, 'Ledger');
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(membersToRows(), {header:MEMBERS_HEADERS}), 'Members');
-      XLSX.writeFile(wb, `kibiina-ledger-template-${new Date().toISOString().slice(0,10)}.xlsx`);
-    }catch(err){ alert(err.message||'Failed to export ledger'); }
-  };
-  const exF = document.getElementById('btnExportFilledLedger');
-  if(exF) exF.onclick = ()=> doExport(true);
-
-  const imp = document.getElementById('importXLSX');
-  if(imp) imp.addEventListener('change', async (e)=>{
-    const f=e.target.files[0]; if(!f) return;
-    try{
-      const ab = await f.arrayBuffer();
-      const wb = XLSX.read(ab, {type:'array'});
-      const errs = validateWorkbook(XLSX, wb);
-      if(errs.length){ alert('IMPORT BLOCKED: Template mismatch.\n\n'+errs.map(x=>'• '+x).join('\n')); e.target.value=''; return; }
-
-      // Members (upsert)
-      const memRows = XLSX.utils.sheet_to_json(wb.Sheets['Members']);
-      memRows.forEach(r=>{
-        const no=Number(r.No); if(!no||no<1||no>30) return;
-        let m = getMemberByNo(no);
-        if(!m){ m={ id:'m'+Math.random().toString(36).slice(2,9), number:no, name:'', shares:0, munno:0, joinDate:todayStr() }; db.members.push(m); }
-        if(r.Name!==undefined) m.name=String(r.Name);
-        if(r.JoinDate) m.joinDate=String(r.JoinDate).slice(0,10);
-        if(r.Shares!==undefined) m.shares=Number(r.Shares)||0;
-        if(r.Munno!==undefined) m.munno=Number(r.Munno)||0;
-      });
-
-      // Loans (merge/upsert)
-      if(wb.Sheets['Loans']){
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Loans']);
-        rows.forEach(r=>{
-          const no=Number(r.No); if(!no||no<1||no>30) return;
-          let loan = db.loans.find(l=>Number(l.memberNo)===no);
-          if(!loan){
-            loan = {
-              id:'L'+Math.random().toString(36).slice(2,9),
-              memberNo:no,
-              principalOut:Number(r.PrincipalOut)||0,
-              rateMonthly:Number(r.RateMonthly)||loanRateFor(Number(r.PrincipalOut)||0),
-              startDate:String(r.StartDate||todayStr()).slice(0,10),
-              lastAccrual:String(r.LastAccrual||'')||undefined,
-              accruedInterest:Number(r.AccruedInterest)||0,
-              termMonths: Number(r.TermMonths)||'',
-              expectedInterestTotal:Number(r.ExpectedInterest)||0,
-              expectedInterestPaid:0,
-              contracts:[]
-            };
-            db.loans.push(loan);
-          }else{
-            // add values (not overwrite zeros blindly)
-            if(r.PrincipalOut!==undefined) loan.principalOut = Number(loan.principalOut||0) + (Number(r.PrincipalOut)||0);
-            if(r.AccruedInterest!==undefined) loan.accruedInterest = Number(loan.accruedInterest||0) + (Number(r.AccruedInterest)||0);
-            if(r.ExpectedInterest!==undefined) loan.expectedInterestTotal = Number(loan.expectedInterestTotal||0) + (Number(r.ExpectedInterest)||0);
-            if(r.TermMonths!==undefined && !loan.termMonths) loan.termMonths = Number(r.TermMonths)||'';
-            if(r.RateMonthly!==undefined && !loan.rateMonthly) loan.rateMonthly = Number(r.RateMonthly)||loan.rateMonthly;
-            if(r.StartDate && !loan.startDate) loan.startDate = String(r.StartDate).slice(0,10);
-          }
-        });
-      }
-
-      // Transactions (append unique-ish by ts+No+Type+Amount)
-      if(wb.Sheets['Transactions']){
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Transactions']);
-        const existingKey = new Set(db.tx.map(t=>`${t.ts}|${t.memberNo||''}|${t.type}|${t.amount}`));
-        rows.forEach(r=>{
-          const rec = {
-            ts:String(r.Date).slice(0,10),
-            memberNo: r.No? Number(r.No): undefined,
-            type:String(r.Type||''),
-            amount: Number(r.Amount)||0,
-            meta: r.Meta? (typeof r.Meta==='string'? (()=>{
-              try{ return JSON.parse(r.Meta); }catch(_){ return r.Meta; }
-            })() : r.Meta) : undefined
-          };
-          const key = `${rec.ts}|${rec.memberNo||''}|${rec.type}|${rec.amount}`;
-          if(!existingKey.has(key)){
-            db.tx.push(rec);
-            existingKey.add(key);
-          }
-        });
-      }
-
-      // Ledger (apply as postings; merge — newer dates add up)
-      const ledRows = XLSX.utils.sheet_to_json(wb.Sheets['Ledger']);
-      ledRows.forEach(r=>{
-        const no = Number(r.No); if(!no||no<1||no>30) return;
-        const ts = r.Period? String(r.Period).slice(0,10) : todayStr();
-        if(Number(r.Welfare)>0){ db.welfareFund=(db.welfareFund||0)+Number(r.Welfare); db.tx.push({ts, type:'welfare', memberNo:no, amount:Number(r.Welfare)}); }
-        if(Number(r.Munno)>0){ const m=getMemberByNo(no); if(m){ m.munno=(m.munno||0)+Number(r.Munno); db.tx.push({ts, type:'munno_deposit', memberNo:no, amount:Number(r.Munno)}); }}
-        if(Number(r.MunnoReturned)>0){ const m=getMemberByNo(no); const amt=Number(r.MunnoReturned)||0; if(m && amt>0){ m.munno=Math.max(0,(m.munno||0)-amt); db.tx.push({ts, type:'munno_returned', memberNo:no, amount:amt}); }}
-        if(Number(r.MunnoTaken)>0){ const m=getMemberByNo(no); const amt=Number(r.MunnoTaken)||0; if(m && amt>0){ m.munno=Math.max(0,(m.munno||0)-amt); db.tx.push({ts, type:'munno_taken', memberNo:no, amount:amt}); }}
-        if(Number(r.SharesUGX)>0){ const sh=Number(r.SharesUGX); const m=getMemberByNo(no); if(m){ const sharesBuy = Math.round(sh/3000); m.shares = (m.shares||0)+sharesBuy; db.tx.push({ts, type:'share_buy', memberNo:no, amount:sh, meta:{shares:sharesBuy}}); } }
-        if(Number(r.LoanTaken)>0){
-          const amt=Number(r.LoanTaken); let loan = db.loans.find(l=>Number(l.memberNo)===no); accrueAll(ts);
-          if(loan){ loan.principalOut += amt; db.tx.push({ts, type:'loan_topup', memberNo:no, amount:amt}); }
-          else { db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo:no, principalOut:amt, rateMonthly:loanRateFor(amt), startDate:ts, lastAccrual:ts, accruedInterest:0, termMonths:'', expectedInterestTotal:0, expectedInterestPaid:0, contracts:[] }); db.tx.push({ts, type:'loan_issue', memberNo:no, amount:amt}); }
-        }
-        if(Number(r.LoanReturned)>0){ const amt=Number(r.LoanReturned); const loan=db.loans.find(l=>Number(l.memberNo)===no); if(loan){ accrueAll(ts); const pay=Math.min(amt, loan.principalOut); loan.principalOut-=pay; db.tx.push({ts, type:'repay_principal', memberNo:no, amount:pay}); }}
-        if(Number(r.Interest)>0){ const amt=Number(r.Interest); const loan=db.loans.find(l=>Number(l.memberNo)===no); if(loan){ accrueAll(ts); const pay=Math.min(amt, loan.accruedInterest||0); loan.accruedInterest=(loan.accruedInterest||0)-pay; loan.expectedInterestPaid = Math.round((loan.expectedInterestPaid||0) + pay); db.tx.push({ts, type:'repay_interest', memberNo:no, amount:pay}); }}
-        if(Number(r.LoanForm)>0){ db.tx.push({ts, type:'loan_form_fee', memberNo:no, amount:Number(r.LoanForm)}); }
-        if(Number(r.Fines)>0){ db.tx.push({ts, type:'fine', memberNo:no, amount:Number(r.Fines)}); }
-      });
-
-      save();
-      renderDashboard(); renderMembers(); initMeeting(); renderLoans(); renderRepay(); initReports(); renderRegistrar();
-
-      await maybeDriveAutoSave(); // auto-save to Drive
-      alert('Excel imported and saved to Google Drive.');
-      e.target.value='';
-    }catch(err){
-      console.error(err);
-      alert('Failed to import Excel: '+(err.message||err));
-    }
-  });
-}
-
-/* ========= Self-Test ========= */
-function diag(msg, ok=true){ const box=document.getElementById('diagOut'); if(!box) return; const line = (ok? '✅ ':'❌ ')+msg+'\n'; box.textContent += line; }
-function clearDiag(){ const box=document.getElementById('diagOut'); if(box) box.textContent=''; }
-function assert(cond, msg){ cond? diag(msg, true): diag(msg, false); return !!cond; }
-async function runSelfTest(){
-  clearDiag();
-  diag('Starting self-test...');
-  const snap = clone(db);
-  try{
-    db.members = []; for(let i=1;i<=30;i++){ db.members.push({ id:'m'+Math.random().toString(36).slice(2,9), number:i, name:`Member ${i}`, shares:5, munno:0, joinDate:todayStr() }); }
-    db.loans = []; db.tx = []; db.welfareFund = 0; save();
-    assert(db.members.length===30, '30 members created');
-    const d = todayStr();
-    db.tx.push({ts:d, type:'welfare', memberNo:1, amount:1500}); db.welfareFund+=1500;
-    db.tx.push({ts:d, type:'munno_deposit', memberNo:1, amount:10000}); getMemberByNo(1).munno+=10000;
-    db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo:1, principalOut:500000, rateMonthly:0.025, startDate:d, lastAccrual:d, accruedInterest:0, termMonths:3, expectedInterestTotal:37500, expectedInterestPaid:0, contracts:[{principal:500000,rate:0.025,months:3,expectedInterest:37500,issuedTs:d}] });
-    accrueAll(d);
-    db.tx.push({ts:d, type:'repay_interest', memberNo:1, amount:10000}); db.loans[0].accruedInterest = Math.max(0,(db.loans[0].accruedInterest||0)-10000); db.loans[0].expectedInterestPaid+=10000;
-    db.tx.push({ts:d, type:'repay_principal', memberNo:1, amount:50000}); db.loans[0].principalOut -= 50000;
-    db.tx.push({ts:d, type:'fine', memberNo:1, amount:2000});
-    const rows = computeLedgerRowsFilled(d, d);
-    assert(rows.length===30, 'Ledger has 30 rows');
-    const r1 = rows.find(r=>r.No===1);
-    assert(r1.Welfare===1500, 'Welfare matched');
-    assert(r1.Munno===10000, 'Munno deposit matched');
-    assert(r1.LoanBalance>=450000, 'Loan balance present');
-    assert(r1.Interest>=0, 'Interest captured');
-    diag('Self-test complete. If all checks are green, the app is functioning.');
-  }catch(err){ diag('Self-test failed: '+(err.message||err), false); }
-  finally { db = snap; save(); renderMembers(); renderLoans(); renderRepay(); renderDashboard(); }
-}
-function wireSelfTest(){
-  const st = document.getElementById('btnSelfTest');
-  if(st) st.addEventListener('click', runSelfTest);
-}
-
-/* ========= Registrar data & files (IndexedDB) ========= */
+/* ========= Registrar (data + files) ========= */
 function ensureRegistrar(m){
   if(!m.registrar){
     m.registrar = {
       regDate: m.joinDate || todayStr(),
       fullName: m.name || '',
       phone: '', natId: '', nationality: 'Ugandan', residence: '',
-      tribe:'', dob:'', age:'', formFilled:'yes',
       nextOfKin: { name:'', relation:'', phone:'', address:'' },
       passportPhotoIds: [], bylawsFileId: null, regFormFileId: null, otherDocIds: []
     };
@@ -1716,7 +768,8 @@ function ensureRegistrar(m){
 }
 db.members.forEach(ensureRegistrar);
 
-const FILEDB_NAME='kibiina_files_v1';
+/* ========= IndexedDB for binary files ========= */
+const FILEDB_NAME='kibiina_files_v2';
 const FILEDB_STORE='files';
 function idbOpen(){
   return new Promise((resolve, reject)=>{
@@ -1771,7 +824,7 @@ async function fileDownload(id){
   a.click(); setTimeout(()=> URL.revokeObjectURL(url), 1000);
 }
 
-/* Registrar render & wire */
+/* ========= Registrar: render & wire ========= */
 function renderRegistrar(){
   const sel = document.getElementById('regMemberNo');
   if(!sel) return;
@@ -1848,21 +901,14 @@ function fillRegistrarForm(){
   document.getElementById('regNIN').value        = r.natId || '';
   document.getElementById('regNationality').value= r.nationality || '';
   document.getElementById('regResidence').value  = r.residence || '';
-  document.getElementById('regTribe').value      = r.tribe || '';
-  document.getElementById('regDOB').value        = r.dob || '';
-  document.getElementById('regAge').value        = r.age || '';
-  document.getElementById('regFormFilled').value = r.formFilled || 'yes';
+  document.getElementById('regKinName').value    = r.nextOfKin?.name || '';
+  document.getElementById('regKinRelation').value= r.nextOfKin?.relation || '';
+  document.getElementById('regKinPhone').value   = r.nextOfKin?.phone || '';
+  document.getElementById('regKinAddress').value = r.nextOfKin?.address || '';
   renderFileList('listPassports', r.passportPhotoIds);
   renderSingleFileInfo('infoBylaws', r.bylawsFileId);
   renderSingleFileInfo('infoForm',   r.regFormFileId);
   renderFileList('listOtherDocs', r.otherDocIds);
-
-  // Next of kin
-  if(!r.nextOfKin) r.nextOfKin = {name:'',relation:'',phone:'',address:''};
-  document.getElementById('regKinName').value    = r.nextOfKin.name || '';
-  document.getElementById('regKinRelation').value= r.nextOfKin.relation || '';
-  document.getElementById('regKinPhone').value   = r.nextOfKin.phone || '';
-  document.getElementById('regKinAddress').value = r.nextOfKin.address || '';
 }
 function wireRegistrar(){
   const who = document.getElementById('regMemberNo');
@@ -1878,28 +924,24 @@ function wireRegistrar(){
       r.natId       = document.getElementById('regNIN').value.trim();
       r.nationality = document.getElementById('regNationality').value.trim();
       r.residence   = document.getElementById('regResidence').value.trim();
-      r.tribe       = document.getElementById('regTribe').value.trim();
-      r.dob         = document.getElementById('regDOB').value || '';
-      r.age         = document.getElementById('regAge').value || '';
-      r.formFilled  = document.getElementById('regFormFilled').value || 'yes';
       r.nextOfKin = {
         name:     document.getElementById('regKinName').value.trim(),
         relation: document.getElementById('regKinRelation').value.trim(),
         phone:    document.getElementById('regKinPhone').value.trim(),
         address:  document.getElementById('regKinAddress').value.trim()
       };
-      if(!m.name && r.fullName) m.name = r.fullName; // sync display name if empty
+      if(!m.name && r.fullName) m.name = r.fullName;
       save(); renderMembers(); alert('Registrar details saved.');
     };
   }
-  // Files
+  // Uploaders
   const pass = document.getElementById('regPassports');
   if(pass){
     pass.addEventListener('change', async (e)=>{
       const m = selectedMemberRegistrar(); if(!m) return;
       const r = ensureRegistrar(m);
       const files = Array.from(e.target.files||[]);
-      for(const f of files){ const id = await filePut(f); r.passportPhotoIds.push(id); }
+      for(const f of files){ r.passportPhotoIds.push(await filePut(f)); }
       save(); e.target.value=''; renderFileList('listPassports', r.passportPhotoIds);
     });
   }
@@ -1947,19 +989,937 @@ function wireRegistrar(){
       const m = selectedMemberRegistrar(); if(!m) return;
       const r = ensureRegistrar(m);
       const files = Array.from(e.target.files||[]);
-      for(const f of files){ const id = await filePut(f); r.otherDocIds.push(id); }
+      for(const f of files){ r.otherDocIds.push(await filePut(f)); }
       save(); e.target.value=''; renderFileList('listOtherDocs', r.otherDocIds);
     });
   }
 }
+</script>
+<script>
+/* ========= Meeting ========= */
+function nextSundayStr(){ const d=new Date(); const day=d.getDay(); const diff=(7-day)%7; d.setDate(d.getDate()+diff); return d.toISOString().slice(0,10); }
+function initMeeting(){
+  const md = document.getElementById('meetDate'); if(md) md.value = db.settings.lastMeetingDate || nextSundayStr();
+  const wp = document.getElementById('welfarePer'); if(wp) wp.value = 1500;
+  const box = document.getElementById('meetingSheet'); if(box) box.innerHTML='';
+  const pm = document.getElementById('btnPostMeeting'); if(pm) pm.disabled = true;
+}
+function wireMeeting(){
+  const setSun = document.getElementById('btnTodaySunday');
+  if(setSun) setSun.onclick = ()=>{ const md=document.getElementById('meetDate'); if(md) md.value = nextSundayStr(); };
 
-/* ======== Google Drive Config & Sync ======== */
+  const start = document.getElementById('btnStartMeeting');
+  if(start) start.onclick = ()=>{
+    const date = document.getElementById('meetDate').value || todayStr();
+    db.settings.lastMeetingDate = date; save();
+    const per = parseInt(document.getElementById('welfarePer').value||1500);
+    const box = document.getElementById('meetingSheet');
+    if(db.members.length===0){ box.innerHTML='<div class="warnmsg">No members yet. Add members first.</div>'; return; }
+    const sorted = [...db.members].sort((a,b)=> Number(a.number)-Number(b.number));
+
+    let html = `<table class="table"><thead><tr>
+        <th>No.</th><th>Name</th><th>Munno Deposit</th><th>Welfare (UGX ${per})</th><th>Buy Shares</th></tr></thead><tbody>`;
+    sorted.forEach((m)=>{
+      html += `<tr>
+        <td>${m.number}</td>
+        <td>${m.name}</td>
+        <td><input type="number" min="0" step="1" id="in_munno_${m.number}" placeholder="0"></td>
+        <td style="text-align:center"><input type="checkbox" id="in_wel_${m.number}" checked></td>
+        <td><input type="number" min="0" step="1" id="in_share_${m.number}" placeholder="0"></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    box.innerHTML = html;
+    document.getElementById('btnPostMeeting').disabled = false;
+  };
+
+  const post = document.getElementById('btnPostMeeting');
+  if(post) post.onclick = ()=>{
+    const date = document.getElementById('meetDate').value || todayStr();
+    const per = parseInt(document.getElementById('welfarePer').value||1500);
+
+    if(hasAnyMeetingPostOnDate(date)){
+      alert(`Entries already exist on ${date}. To avoid duplicates, pick another date or remove the previous postings first.`);
+      return;
+    }
+
+    accrueAll(date);
+    db.members.forEach(m=>{
+      const munno = parseInt(document.getElementById(`in_munno_${m.number}`).value||0);
+      const wel = document.getElementById(`in_wel_${m.number}`).checked;
+      const sharesBuy = Math.max(0, parseInt(document.getElementById(`in_share_${m.number}`).value||0));
+
+      if(munno>0 && !hasTxOn(date, m.number, 'munno_deposit')){
+        m.munno = (m.munno||0) + munno;
+        db.tx.push({ts:date, type:'munno_deposit', memberNo:m.number, amount:munno});
+      }
+      if(wel && !hasTxOn(date, m.number, 'welfare')){
+        db.welfareFund = (db.welfareFund||0) + per;
+        db.tx.push({ts:date, type:'welfare', memberNo:m.number, amount:per});
+      }
+      if(sharesBuy>0 && !hasTxOn(date, m.number, 'share_buy')){
+        m.shares = (m.shares||0) + sharesBuy;
+        db.tx.push({ts:date, type:'share_buy', memberNo:m.number, amount: sharesBuy*3000, meta:{shares:sharesBuy}});
+      }
+    });
+
+    save(); initMeeting(); renderDashboard(); renderMembers(); alert('Meeting posted.');
+  };
+
+  const btnPrint = document.getElementById('btnPrintMeeting');
+  if(btnPrint) btnPrint.onclick = ()=> printSection('meetingSheet','Sunday Meeting Sheet');
+}
+
+/* ========= Loans ========= */
+function loanRateFor(amount){ if(amount>=1 && amount<=3999999) return 0.025; if(amount>=4000000) return 0.02; return 0; }
+function accrueAll(upToDate){
+  const dTo = upToDate || todayStr();
+  db.loans.forEach(l=>{
+    if((l.principalOut||0)<=0) return;
+    const start = l.lastAccrual || l.startDate || dTo;
+    const days = daysBetween(start, dTo);
+    if(days<=0) return;
+    const dailyRate = (l.rateMonthly||0)/30;
+    const add = (l.principalOut||0) * dailyRate * days;
+    l.accruedInterest = Math.round((l.accruedInterest||0) + add);
+    l.lastAccrual = dTo;
+  });
+  save();
+}
+function updateExpectedLoanPreview(){
+  const amount = parseInt(document.getElementById('loanAmt').value||0);
+  const months = Math.max(1, parseInt(document.getElementById('loanMonths').value||1));
+  const rate = loanRateFor(amount);
+  const exp = Math.round(amount * rate * months);
+  document.getElementById('loanPreview').textContent =
+    `Rate ${ (rate*100).toFixed(1) }%/mo • Expected interest ${UGX(exp)} for ${months} month(s)`;
+}
+function renderLoans(){
+  const sel = document.getElementById('loanMember'); if(!sel) return;
+  const sorted=[...db.members].sort((a,b)=>Number(a.number)-Number(b.number));
+  sel.innerHTML = sorted.map(m=>`<option value="${m.number}">${m.number} – ${m.name}</option>`).join('');
+  document.getElementById('loanAmt').value='';
+  document.getElementById('loanMonths').value='1';
+  document.getElementById('loanDate').value = todayStr();
+  document.getElementById('loanHint').textContent='';
+  updateExpectedLoanPreview();
+
+  const tbody = document.querySelector('#loansTable tbody'); if(!tbody) return;
+  tbody.innerHTML='';
+  db.loans.forEach(l=>{
+    const m = getMemberByNo(l.memberNo);
+    const exp = Math.round(l.expectedInterestTotal||0);
+    const rem = Math.max(0, exp - (l.expectedInterestPaid||0));
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${l.memberNo}</td>
+      <td>${m? m.name:''}</td>
+      <td>${UGX(l.principalOut||0)}</td>
+      <td>${UGX(l.accruedInterest||0)}</td>
+      <td>${UGX(exp)}</td>
+      <td>${UGX(rem)}</td>
+      <td>${((l.rateMonthly||0)*100).toFixed(2)}%/mo</td>
+      <td>${l.startDate||''}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+function wireLoans(){
+  const amt = document.getElementById('loanAmt');
+  const mos = document.getElementById('loanMonths');
+  if(amt) amt.addEventListener('input', ()=>{
+    const no = document.getElementById('loanMember').value;
+    const m = getMemberByNo(no); if(!m){ document.getElementById('loanHint').textContent=''; return; }
+    const amount = parseInt(document.getElementById('loanAmt').value||0);
+    const shareCap = (m.shares||0)*3000;
+    const currentLoan = db.loans.find(l=>Number(l.memberNo)===Number(no));
+    const principalOut = currentLoan? currentLoan.principalOut : 0;
+    const limit = Math.max(0, shareCap*2 - principalOut);
+    const rate = loanRateFor(amount);
+    document.getElementById('loanHint').innerHTML =
+      `Share capital: <b>${UGX(shareCap)}</b> → Limit: <b>${UGX(limit)}</b> • Proposed rate: <b>${(rate*100)||0}%/mo</b>`;
+    updateExpectedLoanPreview();
+  });
+  if(mos) mos.addEventListener('input', updateExpectedLoanPreview);
+
+  const issue = document.getElementById('btnIssueLoan');
+  if(issue){
+    issue.onclick = ()=>{
+      const memberNo = document.getElementById('loanMember').value;
+      const m = getMemberByNo(memberNo);
+      if(!m){ alert('Select member'); return; }
+      const amount = parseInt(document.getElementById('loanAmt').value||0);
+      const months = Math.max(1, parseInt(document.getElementById('loanMonths').value||1));
+      const date = document.getElementById('loanDate').value || todayStr();
+      if(amount<=0){ alert('Enter amount'); return; }
+      const current = db.loans.find(l=>Number(l.memberNo)===Number(memberNo));
+      const principalOut = current? current.principalOut : 0;
+      const limit = Math.max(0, ((m.shares||0)*3000)*2 - principalOut);
+      if(amount>limit){ alert('Amount exceeds limit.'); return; }
+      const rate = loanRateFor(amount);
+      const expectedInterest = Math.round(amount * rate * months);
+
+      accrueAll(date);
+      if(current){
+        current.principalOut += amount;
+        current.rateMonthly = current.rateMonthly || rate; // keep if set
+        current.termMonths = (current.termMonths||0) + months;
+        current.expectedInterestTotal = Math.round((current.expectedInterestTotal||0) + expectedInterest);
+        (current.contracts||(current.contracts=[])).push({amount, rateMonthly:rate, months, expectedInterest, startDate:date});
+        db.tx.push({ts:date, type:'loan_topup', memberNo, amount});
+      } else {
+        db.loans.push({
+          id:'L'+Math.random().toString(36).slice(2,9),
+          memberNo,
+          principalOut:amount,
+          rateMonthly:rate,
+          startDate:date,
+          lastAccrual:date,
+          accruedInterest:0,
+          termMonths:months,
+          expectedInterestTotal:expectedInterest,
+          expectedInterestPaid:0,
+          contracts:[{amount, rateMonthly:rate, months, expectedInterest, startDate:date}]
+        });
+        db.tx.push({ts:date, type:'loan_issue', memberNo, amount});
+      }
+      save(); renderLoans(); renderDashboard(); alert(`Loan recorded. Expected interest: ${UGX(expectedInterest)}.`);
+    };
+  }
+}
+
+/* ========= Repayments ========= */
+function renderRepay(){
+  const sel = document.getElementById('rpMember'); if(!sel) return;
+  const withLoans = db.members.filter(m=> db.loans.find(l=>Number(l.memberNo)===Number(m.number) && ((l.principalOut||0)>0 || (l.accruedInterest||0)>0)));
+  const sorted=[...withLoans].sort((a,b)=>Number(a.number)-Number(b.number));
+  sel.innerHTML = sorted.map(m=>`<option value="${m.number}">${m.number} – ${m.name}</option>`).join('');
+  document.getElementById('rpAmt').value='';
+  document.getElementById('rpDate').value = todayStr();
+  document.getElementById('rpApply').value = 'auto';
+  const tbody = document.querySelector('#txTable tbody'); if(!tbody) return;
+  const last = clone(db.tx).sort((a,b)=> new Date(b.ts) - new Date(a.ts)).slice(0,20);
+  tbody.innerHTML = last.map(t=>{
+    const m = getMemberByNo(t.memberNo);
+    return `<tr><td>${t.ts}</td><td>${t.memberNo||''}</td><td>${m?m.name:''}</td><td>${t.type}</td><td>${UGX(t.amount)}</td></tr>`;
+  }).join('');
+}
+function wireRepay(){
+  const post = document.getElementById('btnPostRepay');
+  if(post){
+    post.onclick = ()=>{
+      const memberNo = document.getElementById('rpMember').value;
+      const amt = parseInt(document.getElementById('rpAmt').value||0);
+      const date = document.getElementById('rpDate').value || todayStr();
+      const how = document.getElementById('rpApply').value;
+      if(amt<=0){ alert('Enter amount'); return; }
+      const loan = db.loans.find(l=>Number(l.memberNo)===Number(memberNo));
+      if(!loan){ alert('No active loan'); return; }
+      accrueAll(date);
+      let remain = amt;
+      let paidInt=0, paidP=0;
+      if(how==='auto' || how==='interest'){
+        const payInt = Math.min(loan.accruedInterest||0, remain);
+        if(payInt>0){
+          loan.accruedInterest -= payInt;
+          loan.expectedInterestPaid = Math.round((loan.expectedInterestPaid||0) + payInt);
+          db.tx.push({ts:date, type:'repay_interest', memberNo, amount:payInt});
+          remain -= payInt; paidInt = payInt;
+        }
+      }
+      if((how==='auto' || how==='principal') && remain>0){
+        const payP = Math.min(loan.principalOut||0, remain);
+        if(payP>0){
+          loan.principalOut -= payP;
+          db.tx.push({ts:date, type:'repay_principal', memberNo, amount:payP});
+          remain -= payP; paidP = payP;
+        }
+      }
+      save(); renderRepay(); renderLoans(); renderDashboard();
+      document.getElementById('rpResult').textContent =
+        `Paid Interest: ${UGX(paidInt)} • Paid Principal: ${UGX(paidP)} • New Balances — Principal: ${UGX(loan.principalOut||0)}, Interest: ${UGX(loan.accruedInterest||0)}.`;
+    };
+  }
+  const txPrint = document.getElementById('btnTxPrint');
+  if(txPrint) txPrint.onclick = ()=> printSection('txTable','Recent Transactions');
+}
+
+/* ========= Reports ========= */
+function fillMemberOptions(selectId, includeAll){
+  const sel = document.getElementById(selectId); if(!sel) return;
+  const rows = [...db.members].sort((a,b)=>Number(a.number)-Number(b.number));
+  sel.innerHTML = (includeAll? `<option value="all">All Members</option>` : '') +
+    rows.map(m=>`<option value="${m.number}">${m.number} – ${m.name||''}</option>`).join('');
+  if(!includeAll && rows.length) sel.value = String(rows[0].number);
+}
+function quarterRange(q, year){
+  const y=Number(year);
+  if(q==='Q1') return [new Date(y,0,1), new Date(y,2,31)];
+  if(q==='Q2') return [new Date(y,3,1), new Date(y,5,30)];
+  if(q==='Q3') return [new Date(y,6,1), new Date(y,8,30)];
+  return [new Date(y,9,1), new Date(y,11,31)];
+}
+function normalizeRange(fromStr, toStr){
+  const defFrom = new Date(new Date().getFullYear(),0,1).toLocaleDateString('en-CA',{timeZone:'Africa/Kampala'});
+  const defTo   = todayStr();
+  const from = fromStr || defFrom;
+  const to   = toStr   || defTo;
+  const a = new Date(from); const b = new Date(to);
+  return (a>b) ? [to, from] : [from, to];
+}
+function inRange(ts, from, to){
+  const d = new Date(ts);
+  return d>=new Date(from) && d<=new Date(to);
+}
+function initReports(){
+  const y = new Date().getFullYear();
+  document.getElementById('rYear').value = y;
+  document.getElementById('yShareYear').value = y;
+  const from = new Date(y,0,1).toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
+  const to   = new Date().toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
+  const pF = document.getElementById('pFrom'); if(pF) pF.value = from;
+  const pT = document.getElementById('pTo');   if(pT) pT.value = to;
+  fillMemberOptions('pMember', true);
+  fillMemberOptions('msMember', false);
+  const msF = document.getElementById('msFrom'); if(msF) msF.value = from;
+  const msT = document.getElementById('msTo');   if(msT) msT.value = to;
+  document.getElementById('periodOut').innerHTML='';
+  document.getElementById('msOut').innerHTML='';
+  document.getElementById('btnPeriodCSV').disabled = true;
+  document.getElementById('btnMemberCSV').disabled = true;
+}
+function sumPeriod(from, to, who='all'){
+  const isAll = who==='all';
+  const sums = {
+    welfare:0, munnoDep:0, munnoReturned:0, munnoTaken:0,
+    sharesUGX:0, sharesCount:0,
+    loanIssue:0, loanTopup:0, loanTaken:0,
+    repayPrincipal:0, repayInterest:0, fines:0, loanForm:0, txCount:0
+  };
+  const perMember = {};
+  const addRow = (no)=> perMember[no]||(perMember[no]={ No:no, Name:(getMemberByNo(no)?.name)||'',
+    Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0, SharesUGX:0, SharesCount:0, LoanTaken:0, PrincipalRepaid:0, InterestPaid:0, Fines:0, LoanForm:0 });
+
+  db.tx.forEach(t=>{
+    if(!t.ts || !inRange(t.ts, from, to)) return;
+    if(!isAll && Number(t.memberNo)!==Number(who)) return;
+    const no = Number(t.memberNo)||0;
+    sums.txCount++;
+    switch(t.type){
+      case 'welfare': sums.welfare+=t.amount; if(no){addRow(no); perMember[no].Welfare+=t.amount;} break;
+      case 'munno_deposit': sums.munnoDep+=t.amount; if(no){addRow(no); perMember[no].Munno+=t.amount;} break;
+      case 'munno_returned': case 'munno_withdraw':
+        sums.munnoReturned+=t.amount; if(no){addRow(no); perMember[no].MunnoReturned+=t.amount;} break;
+      case 'munno_taken':
+        sums.munnoTaken+=t.amount; if(no){addRow(no); perMember[no].MunnoTaken+=t.amount;} break;
+      case 'share_buy':
+        sums.sharesUGX+=t.amount; sums.sharesCount += (t.meta?.shares||0);
+        if(no){addRow(no); perMember[no].SharesUGX+=t.amount; perMember[no].SharesCount+=(t.meta?.shares||0);}
+        break;
+      case 'loan_issue':
+        sums.loanIssue+=t.amount; sums.loanTaken+=t.amount;
+        if(no){addRow(no); perMember[no].LoanTaken+=t.amount;} break;
+      case 'loan_topup':
+        sums.loanTopup+=t.amount; sums.loanTaken+=t.amount;
+        if(no){addRow(no); perMember[no].LoanTaken+=t.amount;} break;
+      case 'repay_principal':
+        sums.repayPrincipal+=t.amount; if(no){addRow(no); perMember[no].PrincipalRepaid+=t.amount;} break;
+      case 'repay_interest':
+        sums.repayInterest+=t.amount; if(no){addRow(no); perMember[no].InterestPaid+=t.amount;} break;
+      case 'fine':
+        sums.fines+=t.amount; if(no){addRow(no); perMember[no].Fines+=t.amount;} break;
+      case 'loan_form_fee':
+        sums.loanForm+=t.amount; if(no){addRow(no); perMember[no].LoanForm+=t.amount;} break;
+    }
+  });
+  return { sums, perMember: Object.values(perMember).sort((a,b)=>a.No-b.No) };
+}
+let lastPeriodCSVRows = null;
+function renderPeriodReport(){
+  const [from, to] = normalizeRange(
+    document.getElementById('pFrom').value,
+    document.getElementById('pTo').value
+  );
+  const who = document.getElementById('pMember').value || 'all';
+  const { sums, perMember } = sumPeriod(from, to, who);
+
+  let html = `
+    <div class="grid-3">
+      <div class="stat"><span class="muted">Dates</span><b>${from} → ${to}</b></div>
+      <div class="stat"><span class="muted">Transactions</span><b>${sums.txCount}</b></div>
+      <div class="stat"><span class="muted">Interest collected</span><b>${UGX(sums.repayInterest)}</b></div>
+    </div>
+    <div class="grid-3" style="margin-top:8px">
+      <div class="stat"><span class="muted">Welfare</span><b>${UGX(sums.welfare)}</b></div>
+      <div class="stat"><span class="muted">Munno deposits</span><b>${UGX(sums.munnoDep)}</b></div>
+      <div class="stat"><span class="muted">Munno returned</span><b>${UGX(sums.munnoReturned)}</b></div>
+    </div>
+    <div class="grid-3" style="margin-top:8px">
+      <div class="stat"><span class="muted">Shares (UGX)</span><b>${UGX(sums.sharesUGX)}</b></div>
+      <div class="stat"><span class="muted">Shares (count)</span><b>${sums.sharesCount}</b></div>
+      <div class="stat"><span class="muted">Fines</span><b>${UGX(sums.fines)}</b></div>
+    </div>
+    <div class="grid-3" style="margin-top:8px">
+      <div class="stat"><span class="muted">Loans issued</span><b>${UGX(sums.loanIssue)}</b></div>
+      <div class="stat"><span class="muted">Loan topups</span><b>${UGX(sums.loanTopup)}</b></div>
+      <div class="stat"><span class="muted">Principal repaid</span><b>${UGX(sums.repayPrincipal)}</b></div>
+    </div>
+  `;
+
+  if(who==='all' && perMember.length){
+    html += `
+      <h4 style="margin-top:12px">Per-member breakdown</h4>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>No.</th><th>Name</th>
+            <th>Welfare</th><th>Munno +</th><th>Munno Returned</th><th>Munno Taken</th>
+            <th>Shares (UGX)</th><th>Shares (#)</th>
+            <th>Loans Taken</th><th>Principal Repaid</th><th>Interest Paid</th><th>Fines</th><th>Loan Form</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${perMember.map(r=>`
+            <tr>
+              <td>${r.No}</td><td>${r.Name}</td>
+              <td>${UGX(r.Welfare)}</td><td>${UGX(r.Munno)}</td><td>${UGX(r.MunnoReturned)}</td><td>${UGX(r.MunnoTaken)}</td>
+              <td>${UGX(r.SharesUGX)}</td><td>${r.SharesCount}</td>
+              <td>${UGX(r.LoanTaken)}</td><td>${UGX(r.PrincipalRepaid)}</td><td>${UGX(r.InterestPaid)}</td><td>${UGX(r.Fines)}</td><td>${UGX(r.LoanForm)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    `;
+    lastPeriodCSVRows = [
+      ['From',from,'To',to],
+      [],
+      ['No','Name','Welfare','Munno+','MunnoReturned','MunnoTaken','SharesUGX','SharesCount','LoanTaken','PrincipalRepaid','InterestPaid','Fines','LoanForm'],
+      ...perMember.map(r=>[r.No,r.Name,r.Welfare,r.Munno,r.MunnoReturned,r.MunnoTaken,r.SharesUGX,r.SharesCount,r.LoanTaken,r.PrincipalRepaid,r.InterestPaid,r.Fines,r.LoanForm])
+    ];
+    document.getElementById('btnPeriodCSV').disabled = false;
+    document.getElementById('btnPeriodPrint').disabled = false;
+  }else{
+    lastPeriodCSVRows = null;
+    document.getElementById('btnPeriodCSV').disabled = true;
+    document.getElementById('btnPeriodPrint').disabled = false; // can still print summary
+  }
+
+  document.getElementById('periodOut').innerHTML = html;
+}
+function toCSV(rows){
+  return rows.map(r=>r.map(v=>{
+    const s = (v===undefined||v===null)? '' : String(v);
+    if(s.includes(',')||s.includes('"')||s.includes('\n')) return `"${s.replace(/"/g,'""')}"`;
+    return s;
+  }).join(',')).join('\n');
+}
+function exportPeriodCSV(){
+  if(!lastPeriodCSVRows){ alert('Run an all-members period report first.'); return; }
+  const csv = toCSV(lastPeriodCSVRows);
+  download('period-report.csv', new Blob([csv], {type:'text/csv;charset=utf-8'}));
+}
+let lastMemberCSVRows = null;
+function currentSnapshotFor(no){
+  accrueAll(todayStr());
+  const m = getMemberByNo(no);
+  const loan = db.loans.find(l=>Number(l.memberNo)===Number(no));
+  return {
+    shares: m?.shares||0,
+    shareCap: (m?.shares||0)*3000,
+    munno: m?.munno||0,
+    principalOut: loan?.principalOut||0,
+    accruedInterest: loan?.accruedInterest||0
+  };
+}
+function txForMemberInRange(no, from, to){
+  return db.tx.filter(t=> Number(t.memberNo)===Number(no) && t.ts && inRange(t.ts, from, to))
+              .sort((a,b)=> new Date(a.ts)-new Date(b.ts));
+}
+function renderMemberStatement(){
+  const sel = document.getElementById('msMember'); if(!sel||!sel.value){ alert('Choose a member'); return; }
+  const no = Number(sel.value);
+  const [from, to] = normalizeRange(document.getElementById('msFrom').value, document.getElementById('msTo').value);
+  const person = getMemberByNo(no);
+  const { sums } = sumPeriod(from, to, no);
+  const snap = currentSnapshotFor(no);
+  const tx = txForMemberInRange(no, from, to);
+
+  let html = `
+    <div class="grid-3">
+      <div class="stat"><span class="muted">Member</span><b>${no} – ${person?.name||''}</b></div>
+      <div class="stat"><span class="muted">Period</span><b>${from} → ${to}</b></div>
+      <div class="stat"><span class="muted">Transactions in period</span><b>${tx.length}</b></div>
+    </div>
+    <h4 style="margin-top:10px">Current Snapshot (now)</h4>
+    <div class="grid-3">
+      <div class="stat"><span class="muted">Shares</span><b>${snap.shares} (UGX ${UGX(snap.shareCap).replace('UGX ','')})</b></div>
+      <div class="stat"><span class="muted">Munno balance</span><b>${UGX(snap.munno)}</b></div>
+      <div class="stat"><span class="muted">Loan O/S • Interest O/S</span><b>${UGX(snap.principalOut)} • ${UGX(snap.accruedInterest)}</b></div>
+    </div>
+    <h4 style="margin-top:10px">Activity in Period</h4>
+    <div class="grid-3">
+      <div class="stat"><span class="muted">Welfare</span><b>${UGX(sums.welfare)}</b></div>
+      <div class="stat"><span class="muted">Munno +</span><b>${UGX(sums.munnoDep)}</b></div>
+      <div class="stat"><span class="muted">Munno returned</span><b>${UGX(sums.munnoReturned)}</b></div>
+    </div>
+    <div class="grid-3" style="margin-top:8px">
+      <div class="stat"><span class="muted">Shares (UGX)</span><b>${UGX(sums.sharesUGX)}</b></div>
+      <div class="stat"><span class="muted">Shares (count)</span><b>${sums.sharesCount}</b></div>
+      <div class="stat"><span class="muted">Fines</span><b>${UGX(sums.fines)}</b></div>
+    </div>
+    <div class="grid-3" style="margin-top:8px">
+      <div class="stat"><span class="muted">Loans taken</span><b>${UGX(sums.loanTaken)}</b></div>
+      <div class="stat"><span class="muted">Principal repaid</span><b>${UGX(sums.repayPrincipal)}</b></div>
+      <div class="stat"><span class="muted">Interest paid</span><b>${UGX(sums.repayInterest)}</b></div>
+    </div>
+    <h4 style="margin-top:12px">Transactions (${tx.length})</h4>
+    <table class="table">
+      <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Meta</th></tr></thead>
+      <tbody>
+        ${tx.map(t=>`<tr><td>${t.ts}</td><td>${t.type}</td><td>${UGX(t.amount)}</td><td>${t.meta?JSON.stringify(t.meta):''}</td></tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+  document.getElementById('msOut').innerHTML = html;
+  lastMemberCSVRows = [
+    ['Member', `${no} – ${person?.name||''}`],
+    ['From', from, 'To', to],
+    [],
+    ['Date','Type','Amount','Meta'],
+    ...tx.map(t=>[t.ts, t.type, t.amount, t.meta? JSON.stringify(t.meta): ''])
+  ];
+  document.getElementById('btnMemberCSV').disabled = (tx.length===0);
+  document.getElementById('btnMemberPrint').disabled = false;
+}
+function wireReports(){
+  const runQ = document.getElementById('btnRunQuarter');
+  if(runQ){
+    runQ.onclick = ()=>{
+      const q = document.getElementById('rQuarter').value;
+      const y = parseInt(document.getElementById('rYear').value||new Date().getFullYear());
+      const [a,b] = quarterRange(q,y);
+      const inR = t => { const d = new Date(t.ts); return d>=a && d<=b; };
+      const welfare = db.tx.filter(t=>t.type==='welfare' && inR(t)).reduce((s,t)=>s+t.amount,0);
+      const munno = db.tx.filter(t=>t.type==='munno_deposit' && inR(t)).reduce((s,t)=>s+t.amount,0);
+      const shares = db.tx.filter(t=>t.type==='share_buy' && inR(t)).reduce((s,t)=>s+t.amount,0);
+      const interestRec = db.tx.filter(t=>t.type==='repay_interest' && inR(t)).reduce((s,t)=>s+t.amount,0);
+      const principalRec = db.tx.filter(t=>t.type==='repay_principal' && inR(t)).reduce((s,t)=>s+t.amount,0);
+      const loansOut = db.tx.filter(t=>(t.type==='loan_issue'||t.type==='loan_topup') && inR(t)).reduce((s,t)=>s+t.amount,0);
+      document.getElementById('quarterOut').innerHTML = `
+        <div class="grid-3">
+          <div class="stat"><span class="muted">Welfare contributions</span><b>${UGX(welfare)}</b></div>
+          <div class="stat"><span class="muted">Munno deposits</span><b>${UGX(munno)}</b></div>
+          <div class="stat"><span class="muted">Shares purchased</span><b>${UGX(shares)}</b></div>
+        </div>
+        <div class="grid-3" style="margin-top:8px">
+          <div class="stat"><span class="muted">Loans issued/topups</span><b>${UGX(loansOut)}</b></div>
+          <div class="stat"><span class="muted">Principal repaid</span><b>${UGX(principalRec)}</b></div>
+          <div class="stat"><span class="muted">Interest collected</span><b>${UGX(interestRec)}</b></div>
+        </div>
+      `;
+    };
+  }
+  const btnP = document.getElementById('btnRunPeriod'); if(btnP) btnP.onclick = renderPeriodReport;
+  const btnPCSV = document.getElementById('btnPeriodCSV'); if(btnPCSV) btnPCSV.onclick = exportPeriodCSV;
+  const btnPP = document.getElementById('btnPeriodPrint'); if(btnPP) btnPP.onclick = ()=> printSection('periodOut','Custom Period Report');
+  const btnMS = document.getElementById('btnMemberStmt'); if(btnMS) btnMS.onclick = renderMemberStatement;
+  const btnMSCSV = document.getElementById('btnMemberCSV'); if(btnMSCSV) btnMSCSV.onclick = ()=> {
+    if(!lastMemberCSVRows){ alert('Run a member statement first.'); return; }
+    const csv = toCSV(lastMemberCSVRows);
+    download('member-statement.csv', new Blob([csv], {type:'text/csv;charset=utf-8'}));
+  };
+  const btnMSP = document.getElementById('btnMemberPrint'); if(btnMSP) btnMSP.onclick = ()=> printSection('msOut','Member Statement');
+  const btnQPrint = document.getElementById('btnPrintQuarter'); if(btnQPrint) btnQPrint.onclick = ()=> printSection('quarterOut','Quarterly Summary');
+
+  const share = document.getElementById('btnShareOut');
+  if(share){
+    share.onclick = ()=>{
+      const year = parseInt(document.getElementById('yShareYear').value||new Date().getFullYear());
+      const totalInterest = db.tx.filter(t => t.type==='repay_interest' && new Date(t.ts).getFullYear()===year)
+                                 .reduce((s,t)=>s+t.amount,0);
+      const members = clone(db.members).map(m=> ({...m, shareCap:(m.shares||0)*3000}));
+      const pool = members.reduce((s,m)=> s+m.shareCap, 0);
+      let html = `<div class="stat"><span class="muted">Total interest (year)</span><b>${UGX(totalInterest)}</b></div>`;
+      if(pool<=0 || totalInterest<=0){
+        html += `<p class="warnmsg" style="margin-top:8px">No share capital or no interest collected for ${year}.</p>`;
+      }else{
+        html += `<table class="table" style="margin-top:8px"><thead><tr><th>No.</th><th>Name</th><th>Shares</th><th>Share Capital</th><th>Share %</th><th>Payout</th></tr></thead><tbody>`;
+        members.sort((a,b)=>Number(a.number)-Number(b.number)).forEach(m=>{
+          const pct = m.shareCap/pool;
+          const pay = Math.round(totalInterest * pct);
+          html += `<tr><td>${m.number||''}</td><td>${m.name}</td><td>${m.shares||0}</td><td>${UGX(m.shareCap)}</td><td>${(pct*100).toFixed(2)}%</td><td>${UGX(pay)}</td></tr>`;
+        });
+        html += `</tbody></table>`;
+      }
+      document.getElementById('shareOut').innerHTML = html;
+    };
+  }
+}
+
+/* ========= Backup/Restore + Save Now + Print Dash ========= */
+function wireBackup(){
+  const b1 = document.getElementById('btnBackup');
+  const b2 = document.getElementById('btnBackup2');
+  if(b1) b1.onclick = ()=>{ accrueAll(); download('kibiina-backup.json', new Blob([JSON.stringify(db,null,2)], {type:'application/json'})); };
+  if(b2) b2.onclick = ()=>{ accrueAll(); download('kibiina-backup.json', new Blob([JSON.stringify(db,null,2)], {type:'application/json'})); };
+  const r1 = document.getElementById('restoreFile');
+  const r2 = document.getElementById('restoreFile2');
+  if(r1) r1.addEventListener('change', handleRestore);
+  if(r2) r2.addEventListener('change', handleRestore);
+  const wipe = document.getElementById('btnWipe');
+  if(wipe) wipe.onclick = ()=>{ if(!confirm('This will delete ALL data. Continue?')) return; localStorage.removeItem(KEY); location.reload(); };
+
+  const sn1 = document.getElementById('btnSaveNow');
+  const sn2 = document.getElementById('btnSaveNow2');
+  if(sn1) sn1.onclick = ()=>{ save(); alert('Saved.'); };
+  if(sn2) sn2.onclick = ()=>{ save(); alert('Saved.'); };
+
+  const pDash = document.getElementById('btnPrintDash');
+  if(pDash) pDash.onclick = ()=> printSection('dashboard','Kibiina Dashboard');
+}
+async function handleRestore(e){
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = async ()=>{
+    try{
+      const obj = JSON.parse(r.result);
+      if(!obj.members||!obj.loans||!obj.tx){ alert('Invalid file'); return;}
+      db = obj; save();
+      renderDashboard(); renderMembers(); initMeeting(); renderLoans(); renderRepay(); initReports(); renderRegistrar();
+      await maybeDriveAutoSave();
+      alert('JSON imported and saved to Google Drive (if signed in).');
+    }catch(err){ alert('Invalid JSON: '+(err.message||err)); }
+  };
+  r.readAsText(f);
+}
+
+/* ========= Excel (SheetJS) ========= */
+function loadXLSX(){
+  return new Promise((resolve,reject)=>{
+    if(window.XLSX) return resolve(window.XLSX);
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload = ()=> resolve(window.XLSX);
+    s.onerror = ()=> reject(new Error('Failed to load XLSX library. Check internet.'));
+    document.head.appendChild(s);
+  });
+}
+const TEMPLATE_VERSION = 'kibiina-xlsx-v2';
+const MEMBERS_HEADERS = ['No','Name','JoinDate','Shares','Munno'];
+const LOANS_HEADERS   = ['No','PrincipalOut','RateMonthly','StartDate','LastAccrual','AccruedInterest','TermMonths','ExpectedInterest'];
+const TX_HEADERS      = ['Date','No','Type','Amount','Meta'];
+function ledgerHeaders(){
+  // Insert SharesUGX and SharesCount AFTER MunnoTaken
+  return ['No','Name','Welfare','Munno','MunnoReturned','MunnoTaken','SharesUGX','SharesCount','LoanTaken','LoanReturned','LoanForm','Period','Interest','LoanBalance','Fines'];
+}
+function membersToRows(){
+  const map = new Map(db.members.map(m=>[Number(m.number), m]));
+  const out=[];
+  for(let i=1;i<=30;i++){
+    const m = map.get(i);
+    out.push({ No:i, Name:m?m.name:'', JoinDate:m?m.joinDate:'', Shares:m?m.shares||0:0, Munno:m?m.munno||0:0 });
+  }
+  return out;
+}
+function loansToRows(){
+  return db.loans.map(l=>({ No:l.memberNo, PrincipalOut:l.principalOut, RateMonthly:l.rateMonthly, StartDate:l.startDate, LastAccrual:l.lastAccrual||'', AccruedInterest:l.accruedInterest||0, TermMonths:l.termMonths||'', ExpectedInterest:Math.round(l.expectedInterestTotal||0) }));
+}
+function txToRows(){
+  return db.tx.map(t=>({ Date:t.ts, No:t.memberNo||'', Type:t.type, Amount:t.amount, Meta:t.meta?JSON.stringify(t.meta):'' }));
+}
+function ledgerRowsBlank(){
+  const map = new Map(db.members.map(m=>[Number(m.number), m]));
+  const rows=[];
+  for(let i=1;i<=30;i++){
+    const m = map.get(i);
+    rows.push({
+      No:i, Name:m?m.name:'',
+      Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0,
+      SharesUGX:0, SharesCount:0,
+      LoanTaken:0, LoanReturned:0, LoanForm:0,
+      Period:'', Interest:0, LoanBalance:0, Fines:0,
+    });
+  }
+  return rows;
+}
+function computeLedgerRowsFilled(fromStr, toStr){
+  const today = new Date().toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
+  const yearStart = new Date(new Date().getFullYear(),0,1).toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
+  const from = fromStr || yearStart;
+  const to   = toStr || today;
+  accrueAll(to);
+  const sums = {};
+  for(let i=1;i<=30;i++) sums[i] = { No:i, Name:(getMemberByNo(i)?.name)||'', Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0, SharesUGX:0, SharesCount:0, LoanTaken:0, LoanReturned:0, LoanForm:0, Period:to, Interest:0, LoanBalance:0, Fines:0 };
+  const inRange = (ts)=>{ const d = new Date(ts); return d>=new Date(from) && d<=new Date(to); };
+  db.tx.forEach(t=>{
+    if(!t.ts || !inRange(t.ts)) return;
+    const no = Number(t.memberNo); if(!no) return;
+    const amt = Number(t.amount)||0;
+    switch(t.type){
+      case 'welfare': sums[no].Welfare += amt; break;
+      case 'munno_deposit': sums[no].Munno += amt; break;
+      case 'munno_withdraw': sums[no].MunnoReturned += amt; break;
+      case 'munno_returned': sums[no].MunnoReturned += amt; break;
+      case 'munno_taken': sums[no].MunnoTaken += amt; break;
+      case 'share_buy':
+        sums[no].SharesUGX += amt; sums[no].SharesCount += (t.meta?.shares||0); break;
+      case 'loan_issue':
+      case 'loan_topup': sums[no].LoanTaken += amt; break;
+      case 'repay_principal': sums[no].LoanReturned += amt; break;
+      case 'loan_form_fee': sums[no].LoanForm += amt; break;
+      case 'repay_interest': sums[no].Interest += amt; break;
+      case 'fine': sums[no].Fines += amt; break;
+    }
+  });
+  db.loans.forEach(l=>{ const no=Number(l.memberNo); if(!no) return; sums[no].LoanBalance = (sums[no].LoanBalance||0) + (l.principalOut||0); });
+  return Object.values(sums);
+}
+function colLetter(n){ let s=''; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; }
+function addTotalsRow(ws, numericCols){
+  const headerRow=1; const firstData=2; const lastData=31; const totalRow=32;
+  ws['A'+totalRow] = {t:'s', v:'TOTALS'};
+  numericCols.forEach(idx=>{ const col=colLetter(idx); ws[col+totalRow] = { t:'n', f:`SUM(${col}${firstData}:${col}${lastData})` }; });
+  const lastCol = colLetter(Math.max(...numericCols, 15));
+  ws['!ref'] = `A1:${lastCol}${totalRow}`;
+}
+function readHeaders(ws){
+  const r = window.XLSX.utils.decode_range(ws['!ref']);
+  const headers=[];
+  for(let c=r.s.c;c<=r.e.c;c++){
+    const cellAddr = window.XLSX.utils.encode_cell({r:0,c});
+    const cell = ws[cellAddr];
+    headers.push(cell? String(cell.v).trim(): '');
+  }
+  return headers;
+}
+function eqArr(a,b){ if(a.length!==b.length) return false; for(let i=0;i<a.length;i++){ if(String(a[i])!==String(b[i])) return false; } return true; }
+function validateNoSet(rows, sheetName){
+  const set = new Set(rows.map(r=> Number(r.No)));
+  const missing = [];
+  for(let i=1;i<=30;i++){ if(!set.has(i)) missing.push(i); }
+  return missing.length? `${sheetName}: missing member numbers ${missing.join(', ')}` : null;
+}
+function validateWorkbook(XLSX, wb){
+  const errs=[];
+  const mustSheets = ['Members','Ledger'];
+  mustSheets.forEach(n=>{ if(!wb.Sheets[n]) errs.push(`Missing sheet: ${n}`); });
+  if(errs.length) return errs;
+  const hMembers = readHeaders(wb.Sheets['Members']);
+  if(!eqArr(hMembers, MEMBERS_HEADERS)) errs.push(`Members headers must be ${MEMBERS_HEADERS.join(', ')}`);
+  const hLedger = readHeaders(wb.Sheets['Ledger']);
+  if(!eqArr(hLedger, ledgerHeaders())) errs.push(`Ledger headers must be ${ledgerHeaders().join(', ')}`);
+  if(wb.Sheets['Loans']){
+    const hLoans = readHeaders(wb.Sheets['Loans']);
+    if(!eqArr(hLoans, LOANS_HEADERS)) errs.push(`Loans headers must be ${LOANS_HEADERS.join(', ')}`);
+  }
+  if(wb.Sheets['Transactions']){
+    const hTx = readHeaders(wb.Sheets['Transactions']);
+    if(!eqArr(hTx, TX_HEADERS)) errs.push(`Transactions headers must be ${TX_HEADERS.join(', ')}`);
+  }
+  const memRows = XLSX.utils.sheet_to_json(wb.Sheets['Members']);
+  const ledRows = XLSX.utils.sheet_to_json(wb.Sheets['Ledger']);
+  const m1 = validateNoSet(memRows,'Members'); if(m1) errs.push(m1);
+  const m2 = validateNoSet(ledRows,'Ledger');  if(m2) errs.push(m2);
+  return errs;
+}
+async function doExport(includeLedger=true){
+  const XLSX = await loadXLSX();
+  const wb = XLSX.utils.book_new();
+  const wsMeta = XLSX.utils.aoa_to_sheet([
+    ['Template', TEMPLATE_VERSION],
+    ['Exported', new Date().toISOString()]
+  ]);
+  XLSX.utils.book_append_sheet(wb, wsMeta, 'Meta');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(membersToRows(), {header:MEMBERS_HEADERS}), 'Members');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(loansToRows(), {header:LOANS_HEADERS}), 'Loans');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(txToRows(), {header:TX_HEADERS}), 'Transactions');
+  if(includeLedger){
+    const from = (document.getElementById('ledgerFrom')?.value)||'';
+    const to   = (document.getElementById('ledgerTo')?.value)||'';
+    const wsLedger = XLSX.utils.json_to_sheet(computeLedgerRowsFilled(from, to), {header:ledgerHeaders()});
+    // numeric column indexes for ledger: 3..6,7,8,9,10,11,13,14,15
+    addTotalsRow(wsLedger, [3,4,5,6,7,8,9,10,11,13,14,15]);
+    XLSX.utils.book_append_sheet(wb, wsLedger, 'Ledger');
+  }
+  XLSX.writeFile(wb, `kibiina-${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+function wireExcel(){
+  const ex = document.getElementById('btnExportXLSX');
+  if(ex) ex.onclick = async ()=>{ try{ await doExport(true); }catch(err){ alert(err.message||'Failed to export Excel'); } };
+
+  const exL = document.getElementById('btnExportLedgerXLSX');
+  if(exL) exL.onclick = async ()=>{
+    try{
+      const XLSX = await loadXLSX();
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(ledgerRowsBlank(), {header:ledgerHeaders()});
+      addTotalsRow(ws, [3,4,5,6,7,8,9,10,11,13,14,15]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Ledger');
+      XLSX.writeFile(wb, `kibiina-ledger-${new Date().toISOString().slice(0,10)}.xlsx`);
+    }catch(err){ alert(err.message||'Failed to export ledger'); }
+  };
+
+  const exF = document.getElementById('btnExportFilledLedger');
+  if(exF) exF.onclick = ()=> doExport(true);
+
+  const imp = document.getElementById('importXLSX');
+  if(imp) imp.addEventListener('change', async (e)=>{
+    const f=e.target.files[0]; if(!f) return;
+    try{
+      const XLSX = await loadXLSX();
+      const ab = await f.arrayBuffer();
+      const wb = XLSX.read(ab, {type:'array'});
+      const errs = validateWorkbook(XLSX, wb);
+      if(errs.length){ alert('IMPORT BLOCKED: Template mismatch.\n\n'+errs.map(x=>'• '+x).join('\n')); e.target.value=''; return; }
+
+      // Members (upsert)
+      const memRows = XLSX.utils.sheet_to_json(wb.Sheets['Members']);
+      memRows.forEach(r=>{
+        const no=Number(r.No); if(!no||no<1||no>30) return;
+        let m = getMemberByNo(no);
+        if(!m){ m={ id:'m'+Math.random().toString(36).slice(2,9), number:no, name:'', shares:0, munno:0, joinDate:todayStr() }; db.members.push(m); }
+        if(r.Name!==undefined) m.name=String(r.Name);
+        if(r.JoinDate) m.joinDate=String(r.JoinDate).slice(0,10);
+        if(r.Shares!==undefined) m.shares=Math.max(0, Number(r.Shares)||0); // unlimited shares
+        if(r.Munno!==undefined) m.munno=Number(r.Munno)||0;
+      });
+
+      // Loans (merge/upsert)
+      if(wb.Sheets['Loans']){
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Loans']);
+        rows.forEach(r=>{
+          const no=Number(r.No); if(!no||no<1||no>30) return;
+          let loan = db.loans.find(l=>Number(l.memberNo)===no);
+          const addPI = Number(r.PrincipalOut)||0;
+          const addEI = Number(r.ExpectedInterest)||0;
+          if(!loan){
+            loan = {
+              id:'L'+Math.random().toString(36).slice(2,9),
+              memberNo:no,
+              principalOut:addPI,
+              rateMonthly:Number(r.RateMonthly)||loanRateFor(addPI),
+              startDate:String(r.StartDate||todayStr()).slice(0,10),
+              lastAccrual:String(r.LastAccrual||'')||undefined,
+              accruedInterest:Number(r.AccruedInterest)||0,
+              termMonths: Number(r.TermMonths)||'',
+              expectedInterestTotal:addEI,
+              expectedInterestPaid:0,
+              contracts:[]
+            };
+            db.loans.push(loan);
+          }else{
+            loan.principalOut = Number(loan.principalOut||0) + addPI;
+            loan.accruedInterest = Number(loan.accruedInterest||0) + (Number(r.AccruedInterest)||0);
+            loan.expectedInterestTotal = Number(loan.expectedInterestTotal||0) + addEI;
+            if(r.TermMonths!==undefined && !loan.termMonths) loan.termMonths = Number(r.TermMonths)||'';
+            if(r.RateMonthly!==undefined && !loan.rateMonthly) loan.rateMonthly = Number(r.RateMonthly)||loan.rateMonthly;
+            if(r.StartDate && !loan.startDate) loan.startDate = String(r.StartDate).slice(0,10);
+          }
+        });
+      }
+
+      // Transactions (append unique by ts|No|Type|Amount)
+      if(wb.Sheets['Transactions']){
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Transactions']);
+        const existingKey = new Set(db.tx.map(t=>`${t.ts}|${t.memberNo||''}|${t.type}|${t.amount}`));
+        rows.forEach(r=>{
+          const rec = {
+            ts:String(r.Date).slice(0,10),
+            memberNo: r.No? Number(r.No): undefined,
+            type:String(r.Type||''),
+            amount: Number(r.Amount)||0,
+            meta: r.Meta? (typeof r.Meta==='string'? (()=>{
+              try{ return JSON.parse(r.Meta); }catch(_){ return r.Meta; }
+            })() : r.Meta) : undefined
+          };
+          const key = `${rec.ts}|${rec.memberNo||''}|${rec.type}|${rec.amount}`;
+          if(!existingKey.has(key)){
+            db.tx.push(rec);
+            existingKey.add(key);
+          }
+        });
+      }
+
+      // Ledger sheet (apply as postings) — duplicates blocked by (date, member, type)
+      if(wb.Sheets['Ledger']){
+        const ledRows = XLSX.utils.sheet_to_json(wb.Sheets['Ledger']);
+        const existByDateType = new Set(db.tx.map(t=>`${t.ts}|${t.memberNo||''}|${t.type}`));
+        const pushIfNew = (ts,no,type,amount,meta)=>{
+          const k = `${ts}|${no||''}|${type}`;
+          if(existByDateType.has(k)) return false;
+          db.tx.push({ts, type, memberNo:no, amount, meta});
+          existByDateType.add(k);
+          return true;
+        };
+        ledRows.forEach(r=>{
+          const no = Number(r.No); if(!no||no<1||no>30) return;
+          const ts = r.Period? String(r.Period).slice(0,10) : todayStr();
+
+          if(Number(r.Welfare)>0){
+            if(pushIfNew(ts, no, 'welfare', Number(r.Welfare))) db.welfareFund=(db.welfareFund||0)+Number(r.Welfare);
+          }
+          if(Number(r.Munno)>0){
+            const m=getMemberByNo(no); if(m && pushIfNew(ts,no,'munno_deposit',Number(r.Munno))) m.munno=(m.munno||0)+Number(r.Munno);
+          }
+          if(Number(r.MunnoReturned)>0){
+            const m=getMemberByNo(no); const amt=Number(r.MunnoReturned)||0;
+            if(m && pushIfNew(ts,no,'munno_returned',amt)) m.munno=Math.max(0,(m.munno||0)-amt);
+          }
+          if(Number(r.MunnoTaken)>0){
+            const m=getMemberByNo(no); const amt=Number(r.MunnoTaken)||0;
+            if(m && pushIfNew(ts,no,'munno_taken',amt)) m.munno=Math.max(0,(m.munno||0)-amt);
+          }
+          if(Number(r.SharesUGX)>0){
+            const sh=Number(r.SharesUGX); const sharesBuy = Math.round(sh/3000);
+            const m=getMemberByNo(no);
+            if(m && sharesBuy>0 && pushIfNew(ts,no,'share_buy',sh,{shares:sharesBuy})) m.shares = (m.shares||0)+sharesBuy;
+          }
+          if(Number(r.LoanTaken)>0){
+            const amt=Number(r.LoanTaken); let loan = db.loans.find(l=>Number(l.memberNo)===no); accrueAll(ts);
+            if(pushIfNew(ts,no,(loan?'loan_topup':'loan_issue'),amt)){
+              if(loan){ loan.principalOut += amt; }
+              else { db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo:no, principalOut:amt, rateMonthly:loanRateFor(amt), startDate:ts, lastAccrual:ts, accruedInterest:0, termMonths:'', expectedInterestTotal:0, expectedInterestPaid:0, contracts:[] }); }
+            }
+          }
+          if(Number(r.LoanReturned)>0){
+            const amt=Number(r.LoanReturned); const loan=db.loans.find(l=>Number(l.memberNo)===no);
+            if(loan && pushIfNew(ts,no,'repay_principal',amt)){ accrueAll(ts); const pay=Math.min(amt, loan.principalOut); loan.principalOut-=pay; }
+          }
+          if(Number(r.Interest)>0){
+            const amt=Number(r.Interest); const loan=db.loans.find(l=>Number(l.memberNo)===no);
+            if(loan && pushIfNew(ts,no,'repay_interest',amt)){ accrueAll(ts); const pay=Math.min(amt, loan.accruedInterest||0); loan.accruedInterest=(loan.accruedInterest||0)-pay; loan.expectedInterestPaid = Math.round((loan.expectedInterestPaid||0) + pay); }
+          }
+          if(Number(r.LoanForm)>0){ pushIfNew(ts,no,'loan_form_fee',Number(r.LoanForm)); }
+          if(Number(r.Fines)>0){ pushIfNew(ts,no,'fine',Number(r.Fines)); }
+        });
+      }
+
+      save();
+      renderDashboard(); renderMembers(); initMeeting(); renderLoans(); renderRepay(); initReports(); renderRegistrar();
+      await maybeDriveAutoSave();
+      alert('Excel imported (duplicates by date/member/type skipped) and saved to Google Drive.');
+      e.target.value='';
+    }catch(err){
+      console.error(err);
+      alert('Failed to import Excel: '+(err.message||err));
+    }
+  });
+}
+
+/* ========= Google Drive (GIS + REST) ========= */
 const GOOGLE_CLIENT_ID = "1012401719257-nm0hj0h1na9d7tm8eat4tllgigjrbir0.apps.googleusercontent.com";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const DRIVE_FILE_NAME = "kibiina-backup.json";
 let driveAccessToken = null;
 let driveTokenClient = null;
 
+function loadGIS(){
+  return new Promise((resolve,reject)=>{
+    if(window.google && window.google.accounts){ return resolve(); }
+    const s = document.createElement('script');
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true; s.defer = true;
+    s.onload = resolve; s.onerror = ()=>reject(new Error("Failed to load Google Identity Services"));
+    document.head.appendChild(s);
+  });
+}
 function setCloudStatus(text, good=false){
   const el = document.getElementById('cloudStatus');
   if(!el) return;
@@ -1969,16 +1929,6 @@ function setCloudStatus(text, good=false){
 function setCloudButtons(enabled){
   ['btnCloudSave','btnCloudLoad','btnGSignOut'].forEach(id=>{
     const b = document.getElementById(id); if(b) b.disabled = !enabled;
-  });
-}
-function loadGIS(){
-  return new Promise((resolve,reject)=>{
-    if(window.google && window.google.accounts){ return resolve(); }
-    const s = document.createElement('script');
-    s.src = "https://accounts.google.com/gsi/client";
-    s.async = true; s.defer = true;
-    s.onload = resolve; s.onerror = ()=>reject(new Error("Failed to load Google Identity Services"));
-    document.head.appendChild(s);
   });
 }
 async function initDrive(){
@@ -1991,18 +1941,14 @@ async function initDrive(){
         driveAccessToken = resp.access_token;
         setCloudStatus("Signed in • Ready", true);
         setCloudButtons(true);
-      }else{
-        setCloudStatus("Sign-in failed");
       }
     }
   });
-  // no auto popup; wait for click
 }
 function driveEnsureToken(interactive=true){
   return new Promise((res)=>{
     if(driveAccessToken){ return res(true); }
     if(!driveTokenClient){ setCloudStatus("Cloud not ready"); return res(false); }
-    const opts = interactive ? {} : {prompt:""};
     driveTokenClient.callback = (resp)=>{
       if(resp && resp.access_token){
         driveAccessToken = resp.access_token;
@@ -2012,7 +1958,7 @@ function driveEnsureToken(interactive=true){
       }
       res(false);
     };
-    driveTokenClient.requestAccessToken(opts);
+    driveTokenClient.requestAccessToken(interactive? {} : {prompt:""});
   });
 }
 function driveSignOut(){
@@ -2035,7 +1981,7 @@ async function driveDownloadFile(fileId){
   if(!r.ok) throw new Error(await r.text());
   return r.text();
 }
-function multipartBody(meta, contentStr, mime="application/json"){
+function makeMultipartBody(meta, contentStr, mime="application/json"){
   const boundary = "-------kibiina" + Math.random().toString(36).slice(2);
   const delimiter = `\r\n--${boundary}\r\n`;
   const close = `\r\n--${boundary}--`;
@@ -2052,7 +1998,7 @@ function multipartBody(meta, contentStr, mime="application/json"){
 }
 async function driveCreateBackup(jsonStr){
   const meta = { name: DRIVE_FILE_NAME, mimeType: "application/json" };
-  const { body, headers } = multipartBody(meta, jsonStr);
+  const { body, headers } = makeMultipartBody(meta, jsonStr);
   const url = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
   const r = await fetch(url, { method:"POST", headers, body });
   if(!r.ok) throw new Error(await r.text());
@@ -2060,7 +2006,7 @@ async function driveCreateBackup(jsonStr){
 }
 async function driveUpdateBackup(fileId, jsonStr){
   const meta = { mimeType: "application/json" };
-  const { body, headers } = multipartBody(meta, jsonStr);
+  const { body, headers } = makeMultipartBody(meta, jsonStr);
   const url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`;
   const r = await fetch(url, { method:"PATCH", headers, body });
   if(!r.ok) throw new Error(await r.text());
@@ -2074,7 +2020,7 @@ async function driveSave(showToast=true){
     const existing = await driveFindBackup();
     if(existing){ await driveUpdateBackup(existing.id, json); }
     else { await driveCreateBackup(json); }
-    if(btn){ btn.textContent = "Data saved ✓"; setTimeout(()=> btn.textContent="Save to Google Drive", 2500); }
+    if(btn){ btn.textContent = "Data saved ✓"; setTimeout(()=> btn.textContent="Save to Google Drive", 2200); }
     const t = new Date().toLocaleString('en-UG', { timeZone:'Africa/Kampala' });
     setCloudStatus(`Last saved: ${t}`, true);
   }catch(err){
@@ -2107,13 +2053,7 @@ function wireDrive(){
   const saveB  = document.getElementById('btnCloudSave');
   const loadB  = document.getElementById('btnCloudLoad');
 
-  if(signIn) signIn.onclick = async ()=>{
-    const ok = await driveEnsureToken(true);
-    if(ok){
-      setCloudStatus("Signed in • Ready", true);
-      setCloudButtons(true);
-    }
-  };
+  if(signIn) signIn.onclick = async ()=>{ const ok = await driveEnsureToken(true); if(ok){ setCloudStatus("Signed in • Ready", true); setCloudButtons(true); } };
   if(signOut) signOut.onclick = ()=> driveSignOut();
   if(saveB) saveB.onclick = ()=> driveSave(true);
   if(loadB) loadB.onclick = ()=> driveLoad(false);
@@ -2124,7 +2064,78 @@ async function maybeDriveAutoSave(){
   if(ok) await driveSave(false);
 }
 
-/* ========= Boot ========= */
+/* ========= Self-Test ========= */
+function diag(msg, ok=true){ const box=document.getElementById('diagOut'); if(!box) return; const line = (ok? '✅ ':'❌ ')+msg+'\n'; box.textContent += line; }
+function clearDiag(){ const box=document.getElementById('diagOut'); if(box) box.textContent=''; }
+function assert(cond, msg){ cond? diag(msg, true): diag(msg, false); return !!cond; }
+async function runSelfTest(){
+  clearDiag();
+  diag('Starting self-test...');
+  const snap = clone(db);
+  try{
+    db.members = []; for(let i=1;i<=30;i++){ db.members.push({ id:'m'+Math.random().toString(36).slice(2,9), number:i, name:`Member ${i}`, shares:5, munno:0, joinDate:todayStr() }); }
+    db.loans = []; db.tx = []; db.welfareFund = 0; save();
+    assert(db.members.length===30, '30 members created');
+    const d = todayStr();
+    db.tx.push({ts:d, type:'welfare', memberNo:1, amount:1500}); db.welfareFund+=1500;
+    db.tx.push({ts:d, type:'munno_deposit', memberNo:1, amount:10000}); getMemberByNo(1).munno+=10000;
+    db.tx.push({ts:d, type:'share_buy', memberNo:1, amount:6000, meta:{shares:2}}); getMemberByNo(1).shares+=2;
+    db.loans.push({ id:'L'+Math.random().toString(36).slice(2,9), memberNo:1, principalOut:500000, rateMonthly:0.025, startDate:d, lastAccrual:d, accruedInterest:0, termMonths:2, expectedInterestTotal:500000*0.025*2, expectedInterestPaid:0, contracts:[{amount:500000,rateMonthly:0.025,months:2,expectedInterest:500000*0.025*2,startDate:d}] });
+    accrueAll(d);
+    db.tx.push({ts:d, type:'repay_interest', memberNo:1, amount:10000}); db.loans[0].accruedInterest = Math.max(0,(db.loans[0].accruedInterest||0)-10000); db.loans[0].expectedInterestPaid+=10000;
+    db.tx.push({ts:d, type:'repay_principal', memberNo:1, amount:50000}); db.loans[0].principalOut -= 50000;
+    db.tx.push({ts:d, type:'fine', memberNo:1, amount:2000});
+    const rows = computeLedgerRowsFilled(d, d);
+    assert(rows.length===30, 'Ledger has 30 rows');
+    const r1 = rows.find(r=>r.No===1);
+    assert(r1.Welfare===1500, 'Welfare matched');
+    assert(r1.Munno===10000, 'Munno deposit matched');
+    assert(r1.SharesUGX===6000 && r1.SharesCount===2, 'Shares columns OK');
+    assert(r1.LoanBalance>=450000, 'Loan balance reflected');
+    diag('Self-test complete.');
+  }catch(err){ diag('Self-test failed: '+(err.message||err), false); }
+  finally { db = snap; save(); renderMembers(); renderLoans(); renderRepay(); renderDashboard(); }
+}
+function wireSelfTest(){
+  const st = document.getElementById('btnSelfTest');
+  if(st) st.addEventListener('click', runSelfTest);
+}
+
+/* ========= Month-end Interest Accrual Journal (optional accounting entries) ========= */
+// Posts "interest_accrual" once per completed month (accounting journal only).
+function ensureMonthEndAccruals(){
+  try{
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth(); // 0..11
+    // last complete month:
+    const lastComplete = new Date(y, m, 0); // day 0 of current month = last day of previous month
+    const stopKey = lastComplete.toISOString().slice(0,7); // YYYY-MM
+    let startKey = db.settings.lastAccrualMonthPosted || '';
+    if(!startKey){ // begin from first month this year
+      const jan = new Date(y,0,31).toISOString().slice(0,7);
+      startKey = jan;
+    }
+    // iterate months from startKey(exclusive) to stopKey(inclusive)
+    let cur = new Date(startKey+'-01T00:00:00');
+    while(cur.toISOString().slice(0,7) < stopKey){
+      // move to next month
+      cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+      const monthKey = cur.toISOString().slice(0,7);
+      const monthEnd = new Date(cur.getFullYear(), cur.getMonth()+1, 0).toISOString().slice(0,10);
+      // post accrual entries (do NOT change accruedInterest; this is journal only)
+      db.loans.forEach(l=>{
+        if((l.principalOut||0)>0){
+          const amt = Math.round((l.principalOut||0) * (l.rateMonthly||0));
+          db.tx.push({ts:monthEnd, type:'interest_accrual', memberNo:l.memberNo, amount:amt});
+        }
+      });
+      db.settings.lastAccrualMonthPosted = monthKey;
+    }
+    save();
+  }catch(e){ /* silent */ }
+}
+
+/* ========= Initial boot ========= */
 document.addEventListener('DOMContentLoaded', async ()=>{
   // Default ledger date range (YTD)
   const y = new Date().getFullYear();
@@ -2132,8 +2143,6 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   const to = new Date().toLocaleDateString('en-CA', { timeZone:'Africa/Kampala' });
   const lf = document.getElementById('ledgerFrom'); if(lf) lf.value = from;
   const lt = document.getElementById('ledgerTo');   if(lt) lt.value = to;
-
-  ensureMonthEndAccruals(); // auto-post interest_accrual for missed month-ends
 
   wireTabs();
   wireMembers();
@@ -2154,6 +2163,10 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   initReports();
   renderRegistrar();
 
+  // Month-end accrual journals (optional, for accounting view)
+  ensureMonthEndAccruals();
+
+  // Drive
   await initDrive();
   wireDrive();
 });
