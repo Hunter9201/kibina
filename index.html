@@ -92,6 +92,11 @@
         <div class="stat"><span class="muted">Welfare Fund</span><b id="fundWelfare">UGX 0</b></div>
         <div class="stat"><span class="muted">Munno (Aggregate)</span><b id="fundMunno">UGX 0</b></div>
       </div>
+      <!-- NEW: shares count + fines -->
+      <div class="grid-4" style="margin-top:8px">
+        <div class="stat"><span class="muted">Total Shares (count)</span><b id="statSharesCount">0</b></div>
+        <div class="stat"><span class="muted">Fines Collected (YTD)</span><b id="statFinesYTD">UGX 0</b></div>
+      </div>
       <div class="hr"></div>
       <div class="grid-2">
         <div class="card">
@@ -317,6 +322,29 @@
               <input type="date" id="loanDate">
             </div>
           </div>
+
+          <!-- NEW: Loan form fee + Guarantors -->
+          <div class="grid-3" style="margin-top:8px">
+            <div>
+              <label>Loan form fee (required)</label>
+              <div class="stack">
+                <span class="pill">UGX 1,000</span>
+                <button class="btn" id="btnPayFormFee">Pay fee now</button>
+                <span id="loanFormStatus" class="muted"></span>
+              </div>
+            </div>
+            <div>
+              <label>Guarantor 1 (member no.)</label>
+              <select id="g1Member"></select>
+              <div id="g1Info" class="help"></div>
+            </div>
+            <div>
+              <label>Guarantor 2 (member no.)</label>
+              <select id="g2Member"></select>
+              <div id="g2Info" class="help"></div>
+            </div>
+          </div>
+
           <div class="stat" style="margin-top:8px">
             <span class="muted">Preview</span>
             <b id="loanPreview">Rate auto (2.5%/2%), expected interest UGX 0</b>
@@ -334,7 +362,7 @@
             </thead>
             <tbody></tbody>
           </table>
-          <p class="help">Limit: <b>2× share capital</b>. Rates: <b>2.5%/mo</b> for UGX 1–3,999,999; <b>2%/mo</b> for ≥ UGX 4,000,000. Expected interest = principal × monthly rate × months.</p>
+          <p class="help">Limit: <b>2× share capital</b>. Rates: <b>2.5%/mo</b> for UGX 1–3,999,999; <b>2%/mo</b> for ≥ UGX 4,000,000. Expected interest = principal × monthly rate × months. <br>New loans capitalize interest upfront into balance.</p>
         </div>
       </div>
     </section>
@@ -516,7 +544,7 @@
               <button class="btn" id="btnExportFilledLedger">Export Filled Ledger</button>
             </div>
           </div>
-          <p class="help">Ledger now includes a <b>Shares</b> column (UGX + Count) after “Munno Taken”. Duplicate same-date entries are blocked on import.</p>
+          <p class="help">Ledger now includes a <b>Shares</b> column (UGX + Count) after “Munno Taken”. Duplicate same-date entries are blocked on import. <br><b>Note:</b> In the filled ledger export, <i>SharesUGX</i> shows <b>number of shares</b>, and <i>SharesCount</i> shows <b>UGX</b>.</p>
         </div>
 
         <!-- Cloud Sync (Google Drive) -->
@@ -550,7 +578,6 @@
       </div>
     </section>
   </main>
-
 <!-- External (lazy) -->
 <script>
 /* ========= Utilities ========= */
@@ -569,10 +596,33 @@ function download(filename, blob){
 function printSection(id, title=''){
   const el = document.getElementById(id);
   const html = `
-    <html><head><title>${title||document.title}</title>
-    <style>body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif} .table{width:100%;border-collapse:collapse} .table th,.table td{border:1px solid #ddd;padding:6px;text-align:left;font-size:12px}</style>
-    </head><body>${el? el.outerHTML : '<p>No content</p>'}</body></html>`;
-  const w = window.open('','_blank','width=900,height=700');
+  <html>
+    <head>
+      <title>${title||document.title}</title>
+      <meta charset="utf-8">
+      <style>
+        :root { --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; }
+        body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);margin:24px}
+        h1{margin:0 0 14px;font-size:20px}
+        .meta{color:var(--muted);font-size:12px;margin-bottom:16px}
+        .block{margin:10px 0}
+        .table{width:100%;border-collapse:collapse}
+        .table th{background:#f8fafc}
+        .table th,.table td{border:1px solid var(--line);padding:8px;text-align:left;font-size:12px}
+        .table tbody tr:nth-child(even){background:#fcfdff}
+        .stat{display:inline-block;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:4px 6px 10px 0}
+        .stat span{display:block;color:var(--muted);font-size:11px}
+        .stat b{display:block;font-size:16px;margin-top:4px}
+        @page { size:auto; margin:12mm; }
+      </style>
+    </head>
+    <body>
+      <h1>${title || document.title}</h1>
+      <div class="meta">Printed on ${new Date().toLocaleString('en-UG',{timeZone:'Africa/Kampala'})}</div>
+      <div class="block">${el? el.outerHTML : '<p>No content</p>'}</div>
+    </body>
+  </html>`;
+  const w = window.open('','_blank','width=960,height=740');
   w.document.open(); w.document.write(html); w.document.close(); w.focus(); w.print();
 }
 
@@ -584,7 +634,7 @@ catch(e){ console.warn('Local data corrupted. Resetting storage.', e); localStor
 if(!db.members){ // initialize
   db = {
     members: [], // {id,number,name,joinDate,shares,munno, registrar?}
-    loans: [],   // {id, memberNo, principalOut, rateMonthly, startDate, lastAccrual, accruedInterest, termMonths, expectedInterestTotal, expectedInterestPaid, contracts:[{amount,rateMonthly,months,expectedInterest,startDate}]}
+    loans: [],   // {id, memberNo, principalOut, rateMonthly, startDate, lastAccrual, accruedInterest, termMonths, expectedInterestTotal, expectedInterestPaid, guarantors:[{no,name,phone,natId}], contracts:[...] }
     welfareFund: 0,
     tx: [],      // {ts, type, memberNo, amount, meta}
     settings: { lastMeetingDate: todayStr(), lastAccrualMonthPosted: '', updatedAt: new Date().toISOString() }
@@ -632,10 +682,15 @@ function wireTabs(){
 function renderDashboard(){
   const n = db.members.length;
   const shareCap = db.members.reduce((s,m)=> s + (m.shares||0)*3000, 0);
+  const totalSharesCount = db.members.reduce((s,m)=> s + (m.shares||0), 0);
   const loansOut = db.loans.reduce((s,l)=> s + (l.principalOut||0), 0);
   const year = new Date().getFullYear();
-  const intYTD = db.tx.filter(t => t.type==='repay_interest' && new Date(t.ts).getFullYear()===year)
-                      .reduce((s,t)=> s + (t.amount||0), 0);
+  const intYTD = db.tx
+      .filter(t => (t.type==='repay_interest' || t.type==='interest_upfront') && new Date(t.ts).getFullYear()===year)
+      .reduce((s,t)=> s + (t.amount||0), 0);
+  const finesYTD = db.tx
+      .filter(t => t.type==='fine' && new Date(t.ts).getFullYear()===year)
+      .reduce((s,t)=> s + (t.amount||0), 0);
   const munnoAgg = db.members.reduce((s,m)=> s + (m.munno||0), 0);
   const accruedAll = db.loans.reduce((s,l)=> s + (l.accruedInterest||0), 0);
   const expectedRemain = db.loans.reduce((s,l)=> s + Math.max(0,(l.expectedInterestTotal||0)-(l.expectedInterestPaid||0)), 0);
@@ -648,6 +703,9 @@ function renderDashboard(){
   document.getElementById('fundMunno').textContent = UGX(munnoAgg);
   document.getElementById('statAccrued').textContent = UGX(accruedAll);
   document.getElementById('statIntRemain').textContent = UGX(expectedRemain);
+
+  const sc = document.getElementById('statSharesCount'); if(sc) sc.textContent = String(totalSharesCount);
+  const fy = document.getElementById('statFinesYTD');   if(fy) fy.textContent = UGX(finesYTD);
 }
 
 /* ========= Members ========= */
@@ -1091,10 +1149,12 @@ function updateExpectedLoanPreview(){
   const months = Math.max(1, parseInt(document.getElementById('loanMonths').value||1));
   const rate = loanRateFor(amount);
   const exp = Math.round(amount * rate * months);
+  const newBalInc = amount + exp;
   document.getElementById('loanPreview').textContent =
-    `Rate ${ (rate*100).toFixed(1) }%/mo • Expected interest ${UGX(exp)} for ${months} month(s)`;
+    `Rate ${(rate*100).toFixed(1)}%/mo • Expected interest ${UGX(exp)} (capitalized upfront) → Loan balance increases by ${UGX(newBalInc)}`;
 }
 function renderLoans(){
+  // Borrower select
   const sel = document.getElementById('loanMember'); if(!sel) return;
   const sorted=[...db.members].sort((a,b)=>Number(a.number)-Number(b.number));
   sel.innerHTML = sorted.map(m=>`<option value="${m.number}">${m.number} – ${m.name}</option>`).join('');
@@ -1104,6 +1164,23 @@ function renderLoans(){
   document.getElementById('loanHint').textContent='';
   updateExpectedLoanPreview();
 
+  // Guarantor selects
+  const g1 = document.getElementById('g1Member');
+  const g2 = document.getElementById('g2Member');
+  const fillGuars = ()=>{
+    const bn = Number(document.getElementById('loanMember').value);
+    const opts = [...db.members]
+      .filter(m=> Number(m.number)!==bn)
+      .sort((a,b)=>Number(a.number)-Number(b.number))
+      .map(m=>`<option value="${m.number}">${m.number} – ${m.name}</option>`).join('');
+    if(g1) g1.innerHTML = `<option value="">(choose)</option>` + opts;
+    if(g2) g2.innerHTML = `<option value="">(choose)</option>` + opts;
+    const g1Info = document.getElementById('g1Info'); if(g1Info) g1Info.textContent='';
+    const g2Info = document.getElementById('g2Info'); if(g2Info) g2Info.textContent='';
+  };
+  fillGuars();
+
+  // Loans table
   const tbody = document.querySelector('#loansTable tbody'); if(!tbody) return;
   tbody.innerHTML='';
   db.loans.forEach(l=>{
@@ -1121,12 +1198,46 @@ function renderLoans(){
       <td>${l.startDate||''}</td>`;
     tbody.appendChild(tr);
   });
+
+  // refresh fee status snippet
+  const feeStatus = document.getElementById('loanFormStatus');
+  if(feeStatus){
+    const d  = document.getElementById('loanDate').value || todayStr();
+    const no = document.getElementById('loanMember').value;
+    feeStatus.textContent = hasTxOn(d, no, 'loan_form_fee') ? `Paid on ${d}` : `Not paid`;
+  }
 }
 function wireLoans(){
   const amt = document.getElementById('loanAmt');
   const mos = document.getElementById('loanMonths');
+  const borrowerSel = document.getElementById('loanMember');
+  const g1 = document.getElementById('g1Member');
+  const g2 = document.getElementById('g2Member');
+  const g1Info = document.getElementById('g1Info');
+  const g2Info = document.getElementById('g2Info');
+  const feeBtn = document.getElementById('btnPayFormFee');
+  const feeStatus = document.getElementById('loanFormStatus');
+
+  function registrarMini(no){
+    const m = getMemberByNo(no);
+    const r = m?.registrar || {};
+    return { no: Number(no)||0, name: m?.name || '', phone: r.phone || '', natId: r.natId || '' };
+  }
+  function setInfo(whichSel, infoBox){
+    const no = Number(whichSel?.value||0);
+    if(!no){ infoBox.textContent=''; return; }
+    const r = registrarMini(no);
+    infoBox.textContent = `${r.name}${r.phone? ' • '+r.phone:''}${r.natId? ' • NIN '+r.natId:''}`;
+  }
+  function refreshFeeStatus(){
+    const no = borrowerSel.value;
+    const d  = document.getElementById('loanDate').value || todayStr();
+    const paid = hasTxOn(d, no, 'loan_form_fee');
+    feeStatus.textContent = paid ? `Paid on ${d}` : `Not paid`;
+  }
+
   if(amt) amt.addEventListener('input', ()=>{
-    const no = document.getElementById('loanMember').value;
+    const no = borrowerSel.value;
     const m = getMemberByNo(no); if(!m){ document.getElementById('loanHint').textContent=''; return; }
     const amount = parseInt(document.getElementById('loanAmt').value||0);
     const shareCap = (m.shares||0)*3000;
@@ -1139,6 +1250,21 @@ function wireLoans(){
     updateExpectedLoanPreview();
   });
   if(mos) mos.addEventListener('input', updateExpectedLoanPreview);
+  if(borrowerSel) borrowerSel.addEventListener('change', ()=>{ renderLoans(); });
+
+  if(g1) g1.addEventListener('change', ()=> setInfo(g1, g1Info));
+  if(g2) g2.addEventListener('change', ()=> setInfo(g2, g2Info));
+
+  if(feeBtn){
+    feeBtn.onclick = ()=>{
+      const no = borrowerSel.value;
+      const d  = document.getElementById('loanDate').value || todayStr();
+      if(hasTxOn(d, no, 'loan_form_fee')){ alert('Fee already paid for this date.'); return; }
+      db.tx.push({ts:d, type:'loan_form_fee', memberNo:no, amount:1000});
+      save(); refreshFeeStatus();
+      alert('Loan form fee (UGX 1,000) posted.');
+    };
+  }
 
   const issue = document.getElementById('btnIssueLoan');
   if(issue){
@@ -1146,42 +1272,70 @@ function wireLoans(){
       const memberNo = document.getElementById('loanMember').value;
       const m = getMemberByNo(memberNo);
       if(!m){ alert('Select member'); return; }
+
       const amount = parseInt(document.getElementById('loanAmt').value||0);
       const months = Math.max(1, parseInt(document.getElementById('loanMonths').value||1));
       const date = document.getElementById('loanDate').value || todayStr();
       if(amount<=0){ alert('Enter amount'); return; }
+
+      // enforce loan form fee before issuing
+      if(!hasTxOn(date, memberNo, 'loan_form_fee')){
+        alert('Loan form fee (UGX 1,000) must be paid before issuing this loan. Click "Pay fee now".');
+        return;
+      }
+
+      // guarantors validation
+      const g1No = Number(document.getElementById('g1Member')?.value||0);
+      const g2No = Number(document.getElementById('g2Member')?.value||0);
+      if(!g1No || !g2No){ alert('Please choose two guarantors.'); return; }
+      if(g1No===g2No){ alert('Guarantors must be two different members.'); return; }
+      if(g1No===Number(memberNo) || g2No===Number(memberNo)){ alert('Borrower cannot be a guarantor.'); return; }
+      const guar = [g1No, g2No].map(registrarMini);
+
+      // limit on original principal
       const current = db.loans.find(l=>Number(l.memberNo)===Number(memberNo));
       const principalOut = current? current.principalOut : 0;
       const limit = Math.max(0, ((m.shares||0)*3000)*2 - principalOut);
       if(amount>limit){ alert('Amount exceeds limit.'); return; }
+
       const rate = loanRateFor(amount);
       const expectedInterest = Math.round(amount * rate * months);
+      const capitalized = amount + expectedInterest;
 
       accrueAll(date);
+
       if(current){
-        current.principalOut += amount;
-        current.rateMonthly = current.rateMonthly || rate; // keep if set
+        current.principalOut += capitalized;
+        current.rateMonthly = 0; // this new chunk’s interest handled upfront
         current.termMonths = (current.termMonths||0) + months;
         current.expectedInterestTotal = Math.round((current.expectedInterestTotal||0) + expectedInterest);
-        (current.contracts||(current.contracts=[])).push({amount, rateMonthly:rate, months, expectedInterest, startDate:date});
+        current.expectedInterestPaid  = Math.round((current.expectedInterestPaid||0)  + expectedInterest);
+        current.contracts = current.contracts||[];
+        current.contracts.push({amount, rateMonthly:rate, months, expectedInterest, startDate:date, interestCapitalized:true});
+        current.guarantors = guar;
         db.tx.push({ts:date, type:'loan_topup', memberNo, amount});
+        db.tx.push({ts:date, type:'interest_upfront', memberNo, amount:expectedInterest});
       } else {
         db.loans.push({
           id:'L'+Math.random().toString(36).slice(2,9),
           memberNo,
-          principalOut:amount,
-          rateMonthly:rate,
+          principalOut:capitalized,
+          rateMonthly:0, // interest handled upfront
           startDate:date,
           lastAccrual:date,
           accruedInterest:0,
           termMonths:months,
           expectedInterestTotal:expectedInterest,
-          expectedInterestPaid:0,
-          contracts:[{amount, rateMonthly:rate, months, expectedInterest, startDate:date}]
+          expectedInterestPaid:expectedInterest,
+          contracts:[{amount, rateMonthly:rate, months, expectedInterest, startDate:date, interestCapitalized:true}],
+          guarantors: guar
         });
         db.tx.push({ts:date, type:'loan_issue', memberNo, amount});
+        db.tx.push({ts:date, type:'interest_upfront', memberNo, amount:expectedInterest});
       }
-      save(); renderLoans(); renderDashboard(); alert(`Loan recorded. Expected interest: ${UGX(expectedInterest)}.`);
+
+      save(); renderLoans(); renderDashboard();
+      alert(`Loan recorded. Interest ${UGX(expectedInterest)} capitalized → balance increased by ${UGX(capitalized)}.`);
     };
   }
 }
@@ -1323,6 +1477,7 @@ function sumPeriod(from, to, who='all'){
       case 'repay_principal':
         sums.repayPrincipal+=t.amount; if(no){addRow(no); perMember[no].PrincipalRepaid+=t.amount;} break;
       case 'repay_interest':
+      case 'interest_upfront':
         sums.repayInterest+=t.amount; if(no){addRow(no); perMember[no].InterestPaid+=t.amount;} break;
       case 'fine':
         sums.fines+=t.amount; if(no){addRow(no); perMember[no].Fines+=t.amount;} break;
@@ -1398,7 +1553,7 @@ function renderPeriodReport(){
   }else{
     lastPeriodCSVRows = null;
     document.getElementById('btnPeriodCSV').disabled = true;
-    document.getElementById('btnPeriodPrint').disabled = false; // can still print summary
+    document.getElementById('btnPeriodPrint').disabled = false;
   }
 
   document.getElementById('periodOut').innerHTML = html;
@@ -1499,7 +1654,9 @@ function wireReports(){
       const welfare = db.tx.filter(t=>t.type==='welfare' && inR(t)).reduce((s,t)=>s+t.amount,0);
       const munno = db.tx.filter(t=>t.type==='munno_deposit' && inR(t)).reduce((s,t)=>s+t.amount,0);
       const shares = db.tx.filter(t=>t.type==='share_buy' && inR(t)).reduce((s,t)=>s+t.amount,0);
-      const interestRec = db.tx.filter(t=>t.type==='repay_interest' && inR(t)).reduce((s,t)=>s+t.amount,0);
+      const interestRec = db.tx
+        .filter(t => (t.type==='repay_interest' || t.type==='interest_upfront') && inR(t))
+        .reduce((s,t)=>s+t.amount,0);
       const principalRec = db.tx.filter(t=>t.type==='repay_principal' && inR(t)).reduce((s,t)=>s+t.amount,0);
       const loansOut = db.tx.filter(t=>(t.type==='loan_issue'||t.type==='loan_topup') && inR(t)).reduce((s,t)=>s+t.amount,0);
       document.getElementById('quarterOut').innerHTML = `
@@ -1532,7 +1689,7 @@ function wireReports(){
   if(share){
     share.onclick = ()=>{
       const year = parseInt(document.getElementById('yShareYear').value||new Date().getFullYear());
-      const totalInterest = db.tx.filter(t => t.type==='repay_interest' && new Date(t.ts).getFullYear()===year)
+      const totalInterest = db.tx.filter(t => (t.type==='repay_interest' || t.type==='interest_upfront') && new Date(t.ts).getFullYear()===year)
                                  .reduce((s,t)=>s+t.amount,0);
       const members = clone(db.members).map(m=> ({...m, shareCap:(m.shares||0)*3000}));
       const pool = members.reduce((s,m)=> s+m.shareCap, 0);
@@ -1551,43 +1708,6 @@ function wireReports(){
       document.getElementById('shareOut').innerHTML = html;
     };
   }
-}
-
-/* ========= Backup/Restore + Save Now + Print Dash ========= */
-function wireBackup(){
-  const b1 = document.getElementById('btnBackup');
-  const b2 = document.getElementById('btnBackup2');
-  if(b1) b1.onclick = ()=>{ accrueAll(); download('kibiina-backup.json', new Blob([JSON.stringify(db,null,2)], {type:'application/json'})); };
-  if(b2) b2.onclick = ()=>{ accrueAll(); download('kibiina-backup.json', new Blob([JSON.stringify(db,null,2)], {type:'application/json'})); };
-  const r1 = document.getElementById('restoreFile');
-  const r2 = document.getElementById('restoreFile2');
-  if(r1) r1.addEventListener('change', handleRestore);
-  if(r2) r2.addEventListener('change', handleRestore);
-  const wipe = document.getElementById('btnWipe');
-  if(wipe) wipe.onclick = ()=>{ if(!confirm('This will delete ALL data. Continue?')) return; localStorage.removeItem(KEY); location.reload(); };
-
-  const sn1 = document.getElementById('btnSaveNow');
-  const sn2 = document.getElementById('btnSaveNow2');
-  if(sn1) sn1.onclick = ()=>{ save(); alert('Saved.'); };
-  if(sn2) sn2.onclick = ()=>{ save(); alert('Saved.'); };
-
-  const pDash = document.getElementById('btnPrintDash');
-  if(pDash) pDash.onclick = ()=> printSection('dashboard','Kibiina Dashboard');
-}
-async function handleRestore(e){
-  const f = e.target.files[0]; if(!f) return;
-  const r = new FileReader();
-  r.onload = async ()=>{
-    try{
-      const obj = JSON.parse(r.result);
-      if(!obj.members||!obj.loans||!obj.tx){ alert('Invalid file'); return;}
-      db = obj; save();
-      renderDashboard(); renderMembers(); initMeeting(); renderLoans(); renderRepay(); initReports(); renderRegistrar();
-      await maybeDriveAutoSave();
-      alert('JSON imported and saved to Google Drive (if signed in).');
-    }catch(err){ alert('Invalid JSON: '+(err.message||err)); }
-  };
-  r.readAsText(f);
 }
 
 /* ========= Excel (SheetJS) ========= */
@@ -1632,6 +1752,7 @@ function ledgerRowsBlank(){
     rows.push({
       No:i, Name:m?m.name:'',
       Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0,
+      // NOTE: blank template values; meaning swap applies in filled export/import
       SharesUGX:0, SharesCount:0,
       LoanTaken:0, LoanReturned:0, LoanForm:0,
       Period:'', Interest:0, LoanBalance:0, Fines:0,
@@ -1647,24 +1768,29 @@ function computeLedgerRowsFilled(fromStr, toStr){
   accrueAll(to);
   const sums = {};
   for(let i=1;i<=30;i++) sums[i] = { No:i, Name:(getMemberByNo(i)?.name)||'', Welfare:0, Munno:0, MunnoReturned:0, MunnoTaken:0, SharesUGX:0, SharesCount:0, LoanTaken:0, LoanReturned:0, LoanForm:0, Period:to, Interest:0, LoanBalance:0, Fines:0 };
-  const inRange = (ts)=>{ const d = new Date(ts); return d>=new Date(from) && d<=new Date(to); };
+  const inR = (ts)=>{ const d = new Date(ts); return d>=new Date(from) && d<=new Date(to); };
   db.tx.forEach(t=>{
-    if(!t.ts || !inRange(t.ts)) return;
+    if(!t.ts || !inR(t.ts)) return;
     const no = Number(t.memberNo); if(!no) return;
     const amt = Number(t.amount)||0;
     switch(t.type){
       case 'welfare': sums[no].Welfare += amt; break;
       case 'munno_deposit': sums[no].Munno += amt; break;
-      case 'munno_withdraw': sums[no].MunnoReturned += amt; break;
+      case 'munno_withdraw':
       case 'munno_returned': sums[no].MunnoReturned += amt; break;
       case 'munno_taken': sums[no].MunnoTaken += amt; break;
-      case 'share_buy':
-        sums[no].SharesUGX += amt; sums[no].SharesCount += (t.meta?.shares||0); break;
+      case 'share_buy': {
+        const shares = (t.meta?.shares||0);
+        sums[no].SharesUGX += shares;          // now holds COUNT
+        sums[no].SharesCount += shares*3000;   // now holds UGX
+        break;
+      }
       case 'loan_issue':
       case 'loan_topup': sums[no].LoanTaken += amt; break;
       case 'repay_principal': sums[no].LoanReturned += amt; break;
+      case 'repay_interest':
+      case 'interest_upfront': sums[no].Interest += amt; break;
       case 'loan_form_fee': sums[no].LoanForm += amt; break;
-      case 'repay_interest': sums[no].Interest += amt; break;
       case 'fine': sums[no].Fines += amt; break;
     }
   });
@@ -1777,7 +1903,7 @@ function wireExcel(){
         if(!m){ m={ id:'m'+Math.random().toString(36).slice(2,9), number:no, name:'', shares:0, munno:0, joinDate:todayStr() }; db.members.push(m); }
         if(r.Name!==undefined) m.name=String(r.Name);
         if(r.JoinDate) m.joinDate=String(r.JoinDate).slice(0,10);
-        if(r.Shares!==undefined) m.shares=Math.max(0, Number(r.Shares)||0); // unlimited shares
+        if(r.Shares!==undefined) m.shares=Math.max(0, Number(r.Shares)||0);
         if(r.Munno!==undefined) m.munno=Number(r.Munno)||0;
       });
 
@@ -1825,9 +1951,7 @@ function wireExcel(){
             memberNo: r.No? Number(r.No): undefined,
             type:String(r.Type||''),
             amount: Number(r.Amount)||0,
-            meta: r.Meta? (typeof r.Meta==='string'? (()=>{
-              try{ return JSON.parse(r.Meta); }catch(_){ return r.Meta; }
-            })() : r.Meta) : undefined
+            meta: r.Meta? (typeof r.Meta==='string'? (()=>{ try{ return JSON.parse(r.Meta); }catch(_){ return r.Meta; } })() : r.Meta) : undefined
           };
           const key = `${rec.ts}|${rec.memberNo||''}|${rec.type}|${rec.amount}`;
           if(!existingKey.has(key)){
@@ -1866,11 +1990,22 @@ function wireExcel(){
             const m=getMemberByNo(no); const amt=Number(r.MunnoTaken)||0;
             if(m && pushIfNew(ts,no,'munno_taken',amt)) m.munno=Math.max(0,(m.munno||0)-amt);
           }
+
+          // IMPORTANT: swapped meanings
+          // r.SharesUGX holds NUMBER OF SHARES
+          // r.SharesCount holds AMOUNT IN UGX
+          let sharesCount = 0;
           if(Number(r.SharesUGX)>0){
-            const sh=Number(r.SharesUGX); const sharesBuy = Math.round(sh/3000);
-            const m=getMemberByNo(no);
-            if(m && sharesBuy>0 && pushIfNew(ts,no,'share_buy',sh,{shares:sharesBuy})) m.shares = (m.shares||0)+sharesBuy;
+            sharesCount = Number(r.SharesUGX);
+          } else if(Number(r.SharesCount)>0){
+            sharesCount = Math.round(Number(r.SharesCount)/3000);
           }
+          if(sharesCount>0){
+            const shUGX = sharesCount*3000;
+            const m=getMemberByNo(no);
+            if(m && pushIfNew(ts,no,'share_buy',shUGX,{shares:sharesCount})) m.shares = (m.shares||0)+sharesCount;
+          }
+
           if(Number(r.LoanTaken)>0){
             const amt=Number(r.LoanTaken); let loan = db.loans.find(l=>Number(l.memberNo)===no); accrueAll(ts);
             if(pushIfNew(ts,no,(loan?'loan_topup':'loan_issue'),amt)){
@@ -1924,7 +2059,6 @@ function setCloudStatus(text, good=false){
   const el = document.getElementById('cloudStatus');
   if(!el) return;
   el.textContent = text;
-  el.className = 'pill ' + (good ? '' : '');
 }
 function setCloudButtons(enabled){
   ['btnCloudSave','btnCloudLoad','btnGSignOut'].forEach(id=>{
@@ -2090,39 +2224,30 @@ async function runSelfTest(){
     const r1 = rows.find(r=>r.No===1);
     assert(r1.Welfare===1500, 'Welfare matched');
     assert(r1.Munno===10000, 'Munno deposit matched');
-    assert(r1.SharesUGX===6000 && r1.SharesCount===2, 'Shares columns OK');
+    assert(r1.SharesUGX===2 && r1.SharesCount===6000, 'Shares columns swapped correctly');
     assert(r1.LoanBalance>=450000, 'Loan balance reflected');
     diag('Self-test complete.');
   }catch(err){ diag('Self-test failed: '+(err.message||err), false); }
   finally { db = snap; save(); renderMembers(); renderLoans(); renderRepay(); renderDashboard(); }
 }
-function wireSelfTest(){
-  const st = document.getElementById('btnSelfTest');
-  if(st) st.addEventListener('click', runSelfTest);
-}
 
 /* ========= Month-end Interest Accrual Journal (optional accounting entries) ========= */
-// Posts "interest_accrual" once per completed month (accounting journal only).
 function ensureMonthEndAccruals(){
   try{
     const now = new Date();
-    const y = now.getFullYear(), m = now.getMonth(); // 0..11
-    // last complete month:
-    const lastComplete = new Date(y, m, 0); // day 0 of current month = last day of previous month
-    const stopKey = lastComplete.toISOString().slice(0,7); // YYYY-MM
+    const y = now.getFullYear(), m = now.getMonth();
+    const lastComplete = new Date(y, m, 0);
+    const stopKey = lastComplete.toISOString().slice(0,7);
     let startKey = db.settings.lastAccrualMonthPosted || '';
-    if(!startKey){ // begin from first month this year
+    if(!startKey){
       const jan = new Date(y,0,31).toISOString().slice(0,7);
       startKey = jan;
     }
-    // iterate months from startKey(exclusive) to stopKey(inclusive)
     let cur = new Date(startKey+'-01T00:00:00');
     while(cur.toISOString().slice(0,7) < stopKey){
-      // move to next month
       cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
       const monthKey = cur.toISOString().slice(0,7);
       const monthEnd = new Date(cur.getFullYear(), cur.getMonth()+1, 0).toISOString().slice(0,10);
-      // post accrual entries (do NOT change accruedInterest; this is journal only)
       db.loans.forEach(l=>{
         if((l.principalOut||0)>0){
           const amt = Math.round((l.principalOut||0) * (l.rateMonthly||0));
@@ -2170,6 +2295,49 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   await initDrive();
   wireDrive();
 });
+
+/* ========= Backup/Restore + Save Now + Print Dash ========= */
+function wireBackup(){
+  const b1 = document.getElementById('btnBackup');
+  const b2 = document.getElementById('btnBackup2');
+  if(b1) b1.onclick = ()=>{ accrueAll(); download('kibiina-backup.json', new Blob([JSON.stringify(db,null,2)], {type:'application/json'})); };
+  if(b2) b2.onclick = ()=>{ accrueAll(); download('kibiina-backup.json', new Blob([JSON.stringify(db,null,2)], {type:'application/json'})); };
+  const r1 = document.getElementById('restoreFile');
+  const r2 = document.getElementById('restoreFile2');
+  if(r1) r1.addEventListener('change', handleRestore);
+  if(r2) r2.addEventListener('change', handleRestore);
+  const wipe = document.getElementById('btnWipe');
+  if(wipe) wipe.onclick = ()=>{ if(!confirm('This will delete ALL data. Continue?')) return; localStorage.removeItem(KEY); location.reload(); };
+
+  const sn1 = document.getElementById('btnSaveNow');
+  const sn2 = document.getElementById('btnSaveNow2');
+  if(sn1) sn1.onclick = ()=>{ save(); alert('Saved.'); };
+  if(sn2) sn2.onclick = ()=>{ save(); alert('Saved.'); };
+
+  const pDash = document.getElementById('btnPrintDash');
+  if(pDash) pDash.onclick = ()=> printSection('dashboard','Kibiina Dashboard');
+}
+async function handleRestore(e){
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = async ()=>{
+    try{
+      const obj = JSON.parse(r.result);
+      if(!obj.members||!obj.loans||!obj.tx){ alert('Invalid file'); return;}
+      db = obj; save();
+      renderDashboard(); renderMembers(); initMeeting(); renderLoans(); renderRepay(); initReports(); renderRegistrar();
+      await maybeDriveAutoSave();
+      alert('JSON imported and saved to Google Drive (if signed in).');
+    }catch(err){ alert('Invalid JSON: '+(err.message||err)); }
+  };
+  r.readAsText(f);
+}
+
+/* ========= Self-test wire ========= */
+function wireSelfTest(){
+  const st = document.getElementById('btnSelfTest');
+  if(st) st.addEventListener('click', runSelfTest);
+}
 </script>
 </body>
 </html>
